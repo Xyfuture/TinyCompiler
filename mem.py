@@ -2,10 +2,11 @@ import math
 
 
 class mem_entry:
-    def __init__(self, addr, size, bitwidth, **kwargs):
+    def __init__(self, core_id,addr, size, bitwidth, **kwargs):
         self.addr = addr
         self.size = size
         self.bitwidth = bitwidth
+        self.core_id = core_id
 
         self.data_type = None
         self.location = None
@@ -13,12 +14,13 @@ class mem_entry:
             self.data_type = kwargs['data_type']
         if 'location' in kwargs:
             self.location = kwargs['location']
-        if 'core_id' in kwargs:
-            self.core_id = kwargs['core_id']
 
+class vmem_entry(mem_entry):
+    def __init__(self,addr, size, bitwidth, **kwargs):
+        super(vmem_entry, self).__init__(-1,addr, size, bitwidth, **kwargs)
 
 # every core has its own mem allocator
-class mem_allocator:
+class Mem_allocator:
     def __init__(self, max_size, core_id):
         self.stack_mem_addr = 0
         self.heap_mem_addr = 1e8
@@ -34,8 +36,7 @@ class mem_allocator:
 
     def get_heap_mem(self, size, bitwidth, **kwargs):
         kwargs['location'] = 'heap'
-        kwargs['core_id'] = self.core_id
-        entry = mem_entry(self.heap_mem_addr, size, bitwidth, **kwargs)
+        entry = mem_entry(self.core_id,self.heap_mem_addr, size, bitwidth, **kwargs)
 
         self.heap_mem_addr += size
         self.heap_used += size
@@ -46,8 +47,7 @@ class mem_allocator:
 
     def get_stack_mem(self, size, bitwidth, **kwargs):
         kwargs['location'] = 'stack'
-        kwargs['core_id'] = self.core_id
-        entry = mem_entry(self.stack_mem_addr, size, bitwidth, **kwargs)
+        entry = mem_entry(self.core_id,self.stack_mem_addr, size, bitwidth, **kwargs)
 
         self.stack_mem_addr += size
         self.stack_used += size
@@ -73,7 +73,7 @@ class mem_allocator:
     def check_size(self):
         assert self.mem_used <= self.max_size, "ERROR: mem size overflow"
 
-class reg_allocator:
+class Reg_allocator:
     # 64bit reg with count of 32
     def __init__(self):
         self.reg_id = 0

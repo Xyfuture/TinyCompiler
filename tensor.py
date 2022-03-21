@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from typing import List
+
 from .mem import *
 
 class vtensor():
@@ -15,6 +17,10 @@ class vtensor():
 
         self._pre_module = None
         self._post_module = None
+
+        self.mem_array: List[mem_entry] = []
+        # 存储一些列的mem_entry，需要保证是连续的，不允许出现复制的情况（同一块内存同时在两个core中存在）
+
 
     @property
     def pre_module(self):
