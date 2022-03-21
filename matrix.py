@@ -15,14 +15,23 @@ class matrix:
         self.rows,self.colums = self.shape
 
 
-    def simple_split(self):
+    def simple_split(self,cfg:core_cfg,map_method='row'):
         '''
         simple split strategy
-
         :return:
         '''
 
+        ele_per_column = cfg.meu_rows
+        ele_per_row = (cfg.meu_columns*cfg.meu_cell_bit)//self.bitwidth
 
+        if map_method == 'row':
+            ele_core_column = cfg.meu_rows
+            ele_core_row = ele_per_row * cfg.meu_cnt
+        elif map_method == 'column':
+            ele_core_column = ele_per_column * cfg.meu_cnt
+            ele_core_row = ele_per_row
+
+        # todo core allocator
 
 
 

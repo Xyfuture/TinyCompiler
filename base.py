@@ -61,19 +61,22 @@ class linkList:
 
 
 class bitmap:
-    def __init__(self,num):
+    def __init__(self,num,default=False,free_state=False):
         self.num = num
-
-        self.state = [False for i in range(self.num)]
+        self.default = default
+        self.free_state = free_state
+        self.state = [default for i in range(self.num)]
 
     def query(self,i):
         assert 0 <= i < self.num, "ERROR: overflow"
         return self.state[i]
 
-    def get_free(self,cnt=1):
+    def get_free(self,cnt=1,new_state=True,**kwargs):
         if cnt == 1:
             for i,s in enumerate(self.state):
-                if not s:
+                if s is self.free_state:
+                    if not kwargs.get('unset'):
+                        self.state[i] = new_state
                     return i
             raise "ERROR: no free position"
         else:
@@ -82,15 +85,13 @@ class bitmap:
 
     def reset(self):
         for i in range(self.num):
-            self.state[i] = False
+            self.state[i] = self.free_state
 
     def __getitem__(self, item):
         return self.state[item]
 
     def __setitem__(self, key, value):
-        if value:
-            self.state[key] = True
-        else:
-            self.state[key] = False
+        self.state[key] = value
+
 
 

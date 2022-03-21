@@ -14,24 +14,58 @@ class core:
 
         self.mem_allocator = Mem_allocator(self.cfg.omu_size,self.core_id)
         self.reg_allocator = Reg_allocator()
-        self.meu_state = bitmap(self.cfg.meu_cnt)
 
+        self.meu_state = bitmap(self.meu_cnt)
+        self.meu_list = [meu(core_id,i,self.cfg) for i in range(self.meu_cnt)]
+
+    def get_meu(self,cnt=1):
+        meu_id_list = self.meu_state.get_free(cnt)
+        if cnt == 1:
+            return (meu_id_list,self.meu_list[meu_id_list])
+        else:
+            tmp_meu_list = [self.meu_list[i] for i in meu_id_list]
+            return zip(meu_id_list,tmp_meu_list)
 
 
 
 class Core_allocator:
-    pass
+    def __init__(self,cfg_core:core_cfg):
+        self.core_cnt = 64
 
+        self.core_list = [core(i,cfg_core) for i in range(self.core_cnt)]
+        self.core_allocate_state = bitmap(self.core_cnt,"free","free")
 
+    def get_core(self):
+        tmp = self.core_allocate_state.get_free(1,"allocated")
+        # self.core_allocate_state[tmp] = "allocated"
+        return self.core_list[tmp]
 
+    def release_core(self,core_id):
+        self.core_allocate_state[core_id] = "unused"
+
+    def access_core(self,core_id):
+        return self.core_list[core_id]
+
+    def query_core_state(self,core_id):
+        return self.core_allocate_state[core_id]
 
 class meu:
     '''
     just record infomation of sub matrix
     not gen code
     '''
-    def __init__(self,core_id,meu_id,matrix,posi,**kwargs):
+    def __init__(self,core_id,meu_id,cfg:core_cfg,**kwargs):
         self.core_id = core_id
         self.meu_id = meu_id
+        self.matrix = None
+        self.posi = None
+        self.cfg = cfg
+
+
+    def map_to_matrix(self,matrix,posi,shape):
         self.matrix = matrix
         self.posi = posi
+        self.shape = shape
+
+
+
