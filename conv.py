@@ -5,7 +5,7 @@ from .utils import *
 
 
 class conv2d(module):
-    def __init__(self,in_channels, out_channels, kernel_size, stride=1, padding=0, groups=1, bias=True):
+    def __init__(self,in_channels, out_channels, kernel_size, stride=1, padding=0, groups=1, bias=True,activation_func='relu'):
         super(conv2d, self).__init__()
 
         self.conv = nn.Conv2d(in_channels,out_channels,kernel_size,stride=stride,padding=padding,groups=groups,bias=bias)
@@ -16,6 +16,7 @@ class conv2d(module):
         self.padding = self.conv.padding
         self.groups = self.conv.groups
         self.bias = self.conv.bias
+        self.activation_func = activation_func
 
         self.input_shape = ()
         self.output_shape = ()

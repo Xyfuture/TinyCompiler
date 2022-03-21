@@ -15,6 +15,14 @@ class matrix:
         self.rows,self.colums = self.shape
 
 
+    def simple_split(self):
+        '''
+        simple split strategy
+
+        :return:
+        '''
+
+
 
 
 

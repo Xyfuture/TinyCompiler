@@ -6,6 +6,8 @@ class core_cfg:
         self.meu_rows = 128
         self.meu_columns = 128
 
+        self.meu_cnt = 8
+
         self.omu_size = 1000000
 
     def get_config(self):
