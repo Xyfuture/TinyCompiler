@@ -12,3 +12,6 @@ class core_cfg:
 
     def get_config(self):
         pass
+
+# 临时使用，之后需要改一下
+core_config = core_cfg()

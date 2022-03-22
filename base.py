@@ -83,6 +83,9 @@ class bitmap:
             tmp = [self.get_free(1) for _ in range(cnt)]
             return tmp
 
+    def free(self,item):
+        self.state[item] = self.free_state
+
     def reset(self):
         for i in range(self.num):
             self.state[i] = self.free_state

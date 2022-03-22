@@ -21,10 +21,10 @@ class core:
     def get_meu(self,cnt=1):
         meu_id_list = self.meu_state.get_free(cnt)
         if cnt == 1:
-            return (meu_id_list,self.meu_list[meu_id_list])
+            return self.meu_list[meu_id_list]
         else:
             tmp_meu_list = [self.meu_list[i] for i in meu_id_list]
-            return zip(meu_id_list,tmp_meu_list)
+            return tmp_meu_list
 
 
 
@@ -38,7 +38,7 @@ class Core_allocator:
     def get_core(self):
         tmp = self.core_allocate_state.get_free(1,"allocated")
         # self.core_allocate_state[tmp] = "allocated"
-        return self.core_list[tmp]
+        return tmp,self.core_list[tmp]
 
     def release_core(self,core_id):
         self.core_allocate_state[core_id] = "unused"
@@ -48,6 +48,9 @@ class Core_allocator:
 
     def query_core_state(self,core_id):
         return self.core_allocate_state[core_id]
+
+    def __getitem__(self, item):
+        return self.core_list[item]
 
 class meu:
     '''
@@ -65,7 +68,9 @@ class meu:
     def map_to_matrix(self,matrix,posi,shape):
         self.matrix = matrix
         self.posi = posi
-        self.shape = shape
+        self.shape = shape # real shape in meu
 
 
+
+core_allocator = Core_allocator(core_config)
 
