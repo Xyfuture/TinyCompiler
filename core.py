@@ -5,11 +5,11 @@ from .mem import *
 from .config import *
 
 class core:
-    def __init__(self,core_id,cfg:core_cfg,**kwargs):
+    def __init__(self,core_id,**kwargs):
 
         self.core_id = core_id
         self.inst_buffer = linkList()
-        self.cfg = cfg
+        self.cfg = core_allocator.cfg
         self.meu_cnt = self.cfg.meu_cnt
 
         self.mem_allocator = Mem_allocator(self.cfg.omu_size,self.core_id)
@@ -32,7 +32,8 @@ class Core_allocator:
     def __init__(self,cfg_core:core_cfg):
         self.core_cnt = 64
 
-        self.core_list = [core(i,cfg_core) for i in range(self.core_cnt)]
+        self.cfg = cfg_core
+        self.core_list = [core(i) for i in range(self.core_cnt)]
         self.core_allocate_state = bitmap(self.core_cnt,"free","free")
 
     def get_core(self):

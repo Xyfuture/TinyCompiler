@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 from typing import List
-
+from .core import *
 from .mem import *
 
-class vtensor():
+class vtensor:
     def __init__(self,shape,bitwidth,name='vtensor'):
         self.shape = shape
         self.bitwidth = bitwidth
@@ -43,5 +43,138 @@ class vtensor():
 
 
 
-class tensor():
-    pass
+class tensor:
+    def __init__(self,core_id,shape,bitwidth,location,**kwargs):
+        self.core_id = core_id
+        self.core = core_allocator.access_core(self.core_id)
+        self.shape = shape
+        self.dim = len(shape)
+        self.bitwidth =bitwidth
+        self.location = location
+
+        self.sliced = False
+        if 'sliced' in kwargs:
+            self.sliced = kwargs['sliced']
+
+        self.logic_offset = [0 for i in range(self.dim)]
+        for i in range(self.dim):
+            tmp = 1
+            for j in range(self.dim-i-1,-1,-1):
+                tmp *= self.shape[j]
+            self.logic_offset[i] = tmp
+        if 'logic_offset' in kwargs:
+            self.logic_offset = kwargs['logic_offset']
+
+        # real mem
+        self.offset =[0 for i in range(self.dim)]
+        for i in range(self.dim):
+            tmp = self.bitwidth
+            for j in range(self.dim-i-1,-1,-1):
+                tmp *= self.shape[j]
+            self.offset[i] = tmp
+        if 'offset' in kwargs:
+            self.offset = kwargs['offset']
+
+
+        self.start_offset = 0
+        if 'start_offset' in kwargs:
+            self.start_offset = kwargs['start_offset']
+
+        self.ele_cnt = 1
+        for i in self.shape:
+            self.ele_cnt *= i
+
+        if 'mem' in kwargs:
+            self.mem = kwargs['mem']
+        else:
+            mem_size = self.ele_cnt * self.bitwidth
+            self.mem = self.core.mem_allocator.get_mem(mem_size,self.bitwidth,self.location)
+
+    def get_addr(self,posi):
+        return self.mem.addr + self.get_logic_addr(posi)
+
+    def get_logic_addr(self,posi):
+        tmp = self.start_offset
+        for i in range(self.dim):
+            tmp += posi[i]*self.offset[i]
+        return tmp
+
+    def revectorize(self,nvec_shape):
+        start = 0
+        stop = nvec_shape
+        size = nvec_shape*self.bitwidth
+        for i in range(math.ceil(self.ele_cnt/nvec_shape)):
+            if stop >self.ele_cnt:
+                stop = self.ele_cnt
+            tmp_mem = self.core.mem_allocator.get_stack_mem(size,self.bitwidth)
+            yield self.vectorize(slice(start,stop),tmp_mem)
+            self.core.mem_allocator.release_stack_mem(tmp_mem)
+            start += nvec_shape
+            stop += nvec_shape
+
+    def vectorize(self,part:slice,tmp_mem:mem_entry=None):
+        '''
+        分两种情况，一种是原生的tensor，另一种是经过划分的tensor
+        :param part:
+        :param tmp_mem:
+        :return:
+        '''
+        def get_posi(s):
+            tmp = s
+            posi = [0 for i in range(self.dim)]
+            for i in range(self.dim):
+                posi[i] = tmp // self.logic_offset[i]
+                tmp = tmp%self.logic_offset[i]
+            return posi
+
+        start = part.start
+        stop = part.stop
+        size = (part.stop - part.start)*self.bitwidth
+        start_posi = get_posi(start)
+        stop_posi = get_posi(stop)
+
+        if not self.sliced:
+            cur_start_addr = self.get_addr(get_posi(start))
+            tmp_mem = mem_entry(self.core_id,cur_start_addr,size,self.bitwidth,location=self.location)
+            return tmp_mem
+
+        if start_posi[:self.dim-1] == stop_posi[:self.dim-1]:
+            cur_start_addr = self.get_addr(get_posi(start))
+            tmp_mem = mem_entry(self.core_id,cur_start_addr,size,self.bitwidth,location=self.location)
+            return tmp_mem
+
+        assert tmp_mem, "No tmp mem"
+        tmp_mem_addr = tmp_mem.addr
+        written_size = 0
+        cur_start_addr = self.get_addr(start_posi)
+        sec_start = start[self.dim-1]
+        while start_posi != stop_posi:
+            cur_write_size = (self.shape[self.dim-1] - sec_start) * self.bitwidth
+            if written_size+cur_write_size > size:
+                cur_write_size = size - written_size
+            self.core.inst_buffer.append("mv #{} #{} ${} ${}".format(cur_start_addr,tmp_mem_addr,cur_write_size,1))
+
+            start += self.shape[self.dim-1] - sec_start
+            sec_start = 0
+            written_size += cur_write_size
+            tmp_mem_addr += cur_write_size
+            start_posi = get_posi(start)
+            cur_start_addr = self.get_addr(start_posi)
+
+        return tmp_mem
+
+
+    def __getitem__(self, item):
+        assert len(item)==self.dim , "dim not equal"
+        #check
+        for i,s in enumerate(item):
+            assert s.start>=0 and s.stop <=self.shape[i] , "dim not equal"
+
+        nshape = [s.stop-s.start for s in item]
+        nstart_offset = 0
+        for i,s in enumerate(item):
+            nstart_offset += s.start*self.offset[i]
+
+        tmp = tensor(self.core_id,nshape,self.bitwidth,self.location,start_offset=nstart_offset,offset=self.offset,sliced=True)
+        return tmp
+

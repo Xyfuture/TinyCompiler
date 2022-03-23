@@ -34,6 +34,13 @@ class Mem_allocator:
         self.stack_used = 0
         self.heap_used = 0
 
+    def get_mem(self,size,bitwidth,location='stack',**kwargs):
+        if location == 'stack':
+            return self.get_stack_mem(size,bitwidth,**kwargs)
+        elif location == 'heap':
+            return self.get_heap_mem(size,bitwidth,**kwargs)
+        return None
+
     def get_heap_mem(self, size, bitwidth, **kwargs):
         kwargs['location'] = 'heap'
         entry = mem_entry(self.core_id,self.heap_mem_addr, size, bitwidth, **kwargs)

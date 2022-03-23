@@ -38,6 +38,9 @@ class conv2d(module):
 
         return output_tensor,out_vtensor
 
+    def allocate(self):
+        pass
+
     def code_gen(self):
         pass
 
