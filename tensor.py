@@ -65,7 +65,7 @@ class tensor:
         if 'logic_offset' in kwargs:
             self.logic_offset = kwargs['logic_offset']
 
-        # real mem
+        # real mem offset
         self.offset =[0 for i in range(self.dim)]
         for i in range(self.dim):
             tmp = self.bitwidth
@@ -178,3 +178,20 @@ class tensor:
         tmp = tensor(self.core_id,nshape,self.bitwidth,self.location,start_offset=nstart_offset,offset=self.offset,sliced=True)
         return tmp
 
+    def view(self,nshape):
+        # 使用相同的内存
+        tmp_len = 1
+        for i in nshape:
+            tmp_len *= i
+
+        if tmp_len<0:
+            tmp_len *=-1
+            conduct = self.ele_cnt // tmp_len
+            tmp_shape = []
+            for i in nshape:
+                if i != -1:
+                    tmp_shape.append(i)
+                else :
+                    tmp_shape.append(conduct)
+            nshape = tuple(tmp_shape)
+        new_tensor = tensor(self.core_id,nshape,self.bitwidth,self.location,mem=self.mem)
