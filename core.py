@@ -58,18 +58,25 @@ class meu:
     just record infomation of sub matrix
     not gen code
     '''
-    def __init__(self,core_id,meu_id,cfg:core_cfg,**kwargs):
+    def __init__(self,core_id,meu_id,**kwargs):
         self.core_id = core_id
         self.meu_id = meu_id
         self.matrix = None
         self.posi = None
-        self.cfg = cfg
+        self.cfg = core_allocator.cfg
+
+        self.shape = None
+        self.group = None
 
 
-    def map_to_matrix(self,matrix,posi,shape):
-        self.matrix = matrix
-        self.posi = posi
+    def map_to_matrix(self,group:meu_group,shape):
+
         self.shape = shape # real shape in meu
+
+
+class meu_group:
+    def __init__(self):
+        pass
 
 
 

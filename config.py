@@ -7,8 +7,10 @@ class core_cfg:
         self.meu_columns = 128
 
         self.meu_cnt = 8
-
         self.omu_size = 1000000
+
+        # self.core_cnt = 128
+
 
     def get_config(self):
         pass
