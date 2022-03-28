@@ -81,7 +81,9 @@ class matrix:
                 tmp_sub_matrix.map_to_meu()
 
                 self.sub_matrix_array[i].append(tmp_sub_matrix)
-        # todo core allocator
+
+    def gemv_gen(self):
+        pass
         
 
 # posi 这个参数可能是用不到的

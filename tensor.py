@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 from typing import List
+
+from core import core_allocator
 from .core import *
 from .mem import *
 
@@ -9,11 +11,10 @@ class vtensor:
         self.shape = shape
         self.bitwidth = bitwidth
         self.name = name
-        self.size = 1
+        self.length = 1
         for i in self.shape:
-            self.size *= i
-        self.length =self.size
-        self.size *= self.bitwidth
+            self.length *= i
+        self.size = self.length * self.bitwidth
 
         self._pre_module = None
         self._post_module = None
@@ -59,7 +60,7 @@ class tensor:
         self.logic_offset = [0 for i in range(self.dim)]
         for i in range(self.dim):
             tmp = 1
-            for j in range(self.dim-i-1,-1,-1):
+            for j in range(self.dim-i-1,0,-1):
                 tmp *= self.shape[j]
             self.logic_offset[i] = tmp
         if 'logic_offset' in kwargs:
@@ -69,7 +70,7 @@ class tensor:
         self.offset =[0 for i in range(self.dim)]
         for i in range(self.dim):
             tmp = self.bitwidth
-            for j in range(self.dim-i-1,-1,-1):
+            for j in range(self.dim-i-1,0,-1):
                 tmp *= self.shape[j]
             self.offset[i] = tmp
         if 'offset' in kwargs:
@@ -80,14 +81,14 @@ class tensor:
         if 'start_offset' in kwargs:
             self.start_offset = kwargs['start_offset']
 
-        self.ele_cnt = 1
+        self.length = 1
         for i in self.shape:
-            self.ele_cnt *= i
+            self.length *= i
 
         if 'mem' in kwargs:
             self.mem = kwargs['mem']
         else:
-            mem_size = self.ele_cnt * self.bitwidth
+            mem_size = self.length * self.bitwidth
             self.mem = self.core.mem_allocator.get_mem(mem_size,self.bitwidth,self.location)
 
     def get_addr(self,posi):
@@ -103,19 +104,19 @@ class tensor:
         start = 0
         stop = nvec_shape
         size = nvec_shape*self.bitwidth
-        for i in range(math.ceil(self.ele_cnt/nvec_shape)):
-            if stop >self.ele_cnt:
-                stop = self.ele_cnt
+        for i in range(math.ceil(self.length / nvec_shape)):
+            if stop >self.length:
+                stop = self.length
             tmp_mem = self.core.mem_allocator.get_stack_mem(size,self.bitwidth)
             yield self.vectorize(slice(start,stop),tmp_mem)
             self.core.mem_allocator.release_stack_mem(tmp_mem)
             start += nvec_shape
             stop += nvec_shape
 
-    def vectorize(self,part:slice,tmp_mem:mem_entry=None):
+    def vectorize(self, section:slice, tmp_mem:mem_entry=None):
         '''
         分两种情况，一种是原生的tensor，另一种是经过划分的tensor
-        :param part:
+        :param section:
         :param tmp_mem:
         :return:
         '''
@@ -127,9 +128,9 @@ class tensor:
                 tmp = tmp%self.logic_offset[i]
             return posi
 
-        start = part.start
-        stop = part.stop
-        size = (part.stop - part.start)*self.bitwidth
+        start = section.start
+        stop = section.stop
+        size = (section.stop - section.start) * self.bitwidth
         start_posi = get_posi(start)
         stop_posi = get_posi(stop)
 
@@ -138,7 +139,8 @@ class tensor:
             tmp_mem = mem_entry(self.core_id,cur_start_addr,size,self.bitwidth,location=self.location)
             return tmp_mem
 
-        if start_posi[:self.dim-1] == stop_posi[:self.dim-1]:
+        # 前面 dim-1维都是相同的
+        if start_posi[:self.dim-2] == stop_posi[:self.dim-2]:
             cur_start_addr = self.get_addr(get_posi(start))
             tmp_mem = mem_entry(self.core_id,cur_start_addr,size,self.bitwidth,location=self.location)
             return tmp_mem
@@ -164,7 +166,7 @@ class tensor:
         return tmp_mem
 
 
-    def __getitem__(self, item):
+    def __getitem__(self, item)->tensor:
         assert len(item)==self.dim , "dim not equal"
         #check
         for i,s in enumerate(item):
@@ -186,7 +188,7 @@ class tensor:
 
         if tmp_len<0:
             tmp_len *=-1
-            conduct = self.ele_cnt // tmp_len
+            conduct = self.length // tmp_len
             tmp_shape = []
             for i in nshape:
                 if i != -1:
