@@ -1,5 +1,7 @@
 import math
 
+from core import core_allocator
+from .base import *
 
 class mem_entry:
     def __init__(self, core_id,addr, size, bitwidth, **kwargs):
@@ -83,23 +85,12 @@ class Mem_allocator:
 class Reg_allocator:
     # 64bit reg with count of 32
     def __init__(self):
-        self.reg_id = 0
-        self.max_reg_count=32
+        self.reg_bitmap = bitmap(core_allocator.cfg.reg_cnt)
+
+    def get_reg(self):
+        return self.reg_bitmap.get_free()
+
+    def release_stack_reg(self,id):
+        self.reg_bitmap.free(id)
 
 
-    def get_stack_reg(self):
-        tmp = self.reg_id
-        self.reg_id += 1
-        self.check_size()
-
-        return tmp
-
-    def release_stack_reg(self,id=None):
-        tmp = self.reg_id - 1
-        if id :
-            assert id == tmp , "ERROR: reg stack top unmatch"
-        self.reg_id -= 1
-        return tmp
-
-    def check_size(self):
-        assert self.reg_id <= self.max_reg_count , "ERROR: no free register"

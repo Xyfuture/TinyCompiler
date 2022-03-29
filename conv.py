@@ -85,7 +85,3 @@ class conv2d(module):
 
     def conv_compute_gen(self):
         pass
-
-
-
-

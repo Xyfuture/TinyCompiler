@@ -25,7 +25,6 @@ class vtensor:
 
     @property
     def pre_module(self):
-        assert self._pre_module ,"ERROR: _pre_module not defined"
         return self._pre_module
 
     @pre_module.setter

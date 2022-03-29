@@ -9,6 +9,7 @@ class core_cfg:
         self.meu_cnt = 8
         self.omu_size = 1000000
 
+        self.reg_cnt = 32
         # self.core_cnt = 128
 
 
