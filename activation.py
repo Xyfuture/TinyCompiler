@@ -7,14 +7,14 @@ from collections import OrderedDict
 
 # 认怂 直接将padding考虑在内
 class conv_activation:
-    def __init__(self,shape,bitwidth,kernel_shape=(3,3,64),padding=(0,0),stride=(1,1),**kwargs):
+    def __init__(self, shape, bitwidth, kernel_size=(3, 3), padding=(0, 0), stride=(1, 1), **kwargs):
         self.shape = shape
         self.bitwidth = bitwidth
-        self.kernel_shape = kernel_shape
+        self.kernel_size = kernel_size
         self.padding =padding
         self.stride = stride
 
-        self.shape = [self.shape[i]+self.padding[i]*2 for i in range(2)] # padding 考虑在内
+        self.shape = [self.shape[i]+self.padding[i]*2 for i in range(2)] + [self.shape[2]]# padding 考虑在内
 
         self.length = 1
         for i in self.shape:
@@ -28,14 +28,11 @@ class conv_activation:
         self.tensor_dict = OrderedDict()
 
 
-    def bind_core(self,core_id_list):
+    def bind_allocate_mem(self,core_id_list):
         self.core_cnt = len(core_id_list)
         self.core_id_list = core_id_list
         for i in self.core_id_list:
             self.core_dict[i] = core_allocator.access_core(i)
-
-
-    def allocate_mem(self):
         for i in self.core_id_list :
             self.tensor_dict[i] = tensor(i, self.shape, self.bitwidth, location="heap")
 
@@ -48,7 +45,7 @@ class conv_activation:
         """
         height,width,channel = self.shape
         stride_height,stride_width = self.stride
-        kernel_height,kernel_width = self.kernel_shape
+        kernel_height,kernel_width = self.kernel_size
 
         for i in range(0,height,stride_height):
             for j in range(0,width,stride_width):

@@ -14,9 +14,7 @@ class matrix:
         self.shape = shape
         self.bitwidth = bitwidth
         self.rows,self.colums = self.shape
-        self.map_method = 'row'
-        if 'map_method' in kwargs:
-            self.map_method = kwargs['map_method']
+
         self.cfg = core_allocator.cfg
         self.find_core_map_pattern()
 
@@ -39,7 +37,9 @@ class matrix:
         self.map_pattern = best_pattern # 一个core内部meu的map方式
         self.core_cnt = best_core_cnt
         self.core_layout = self.get_core_layout(self.map_pattern) # 整个矩阵对应的核的map方式
-        self.sub_matrix_array = [[] for i in range(self.core_layout[1])] # 构建一个和core_list一致的list存储core对应的sub_matrix
+        self.sub_matrix_array = [[] for i in range(self.core_layout[0])] # 构建一个和core_list一致的list存储core对应的sub_matrix
+
+
 
 
     def get_core_layout(self,pattern):
@@ -81,6 +81,17 @@ class matrix:
                 tmp_sub_matrix.map_to_meu()
 
                 self.sub_matrix_array[i].append(tmp_sub_matrix)
+
+        # section info
+        section_info_dict = {}
+        for i,row_sub_mat in enumerate(self.sub_matrix_array):
+            sec_start = i*self.meu_ele_rows*self.map_pattern[0] # 起始位置
+            sec_end = sec_start + self.meu_ele_rows*self.map_pattern[0]
+            if sec_end > self.rows:
+                sec_end = self.rows
+            for sub_mat_core in row_sub_mat: # 统一行的共享位置
+                section_info_dict[sub_mat_core.core_id] = slice(sec_start,sec_end)
+        self.__setattr__('section_info_dict',section_info_dict)
 
     def gemv_gen(self):
         pass
