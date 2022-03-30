@@ -6,6 +6,10 @@ from reg import *
 vector 最重要的区别是存有一个addr_reg和一个length_reg，这使得这个万一直接支持参与指令的运算
 '''
 class VectorVar:
+
+    VVSET_BITWIDTH = 1
+    VVSET_LENGTH = 128
+
     def __init__(self,vec_shape,core_id,bitwidth,**kwargs):
         # shape 就是length，只是为了统一名字
         self.vec_shape = vec_shape
@@ -28,11 +32,15 @@ class VectorVar:
         return self.addr_reg.reg_id
 
     def get_length_reg(self):
-        if 'addr_reg' in self.__dict__ :
-            return self.addr_reg.reg_id
+        if 'length_reg' in self.__dict__ :
+            return self.length_reg.reg_id
         tmp = RegVar(self.core_id,imm=self.vec_shape)
-        self.__setattr__('addr_reg',tmp)
-        return self.addr_reg.reg_id
+        self.__setattr__('length_reg',tmp)
+        return self.length_reg.reg_id
+
+    def check_vvset(self):
+        assert VectorVar.VVSET_LENGTH == self.vec_shape , "vvset:length not equal"
+        assert VectorVar.VVSET_BITWIDTH == self.bitwidth , "vvset:bitwidth not equal"
 
     def copy(self,src_vec): # 两个vec 之间直接复制
         # assert self.bitwidth*self.vec_shape == src_vec.bitwidth * src_vec.shape
@@ -80,8 +88,14 @@ class VectorVar:
 
     def __add__(self, other):
         assert self.core_id == other.core_id
+
         inst = instruction(instruction.VVADD,rs1=self.get_addr_reg(),rs2=other.get_addr_reg())
         def gen(result_vec):
+            # check vvest length and bitwidth
+            self.check_vvset()
+            other.check_vvset()
+            result_vec.check_vvset()
+
             inst.rd = result_vec.get_addr_reg()
             self.core.inst_buffer.append(inst)
         return gen
@@ -92,3 +106,45 @@ class VectorVar:
 
     def __del__(self):
         pass
+
+
+
+class VectorSet:
+    # 类本身不占有资源，不用释放资源
+    def __init__(self,core_id,bitwidth,length):
+        self.core_id = core_id
+        self.core = core_allocator.access_core(self.core_id)
+        self.bitwidth = bitwidth
+        self.length = length
+
+        self.old_bitwidth = -1
+        self.old_length = -1
+
+    def __enter__(self):
+        self.set()
+        return None
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        # self.reset()
+        # 不返回true就会正常抛出异常
+        pass
+
+    def set(self):
+        self.old_bitwidth = VectorVar.VVSET_BITWIDTH
+        self.old_length = VectorVar.VVSET_LENGTH
+
+        VectorVar.VVSET_BITWIDTH = self.bitwidth
+        VectorVar.VVSET_LENGTH = self.length
+
+        tmp = RegVar(self.core_id, imm=self.length)
+        inst = instruction(instruction.VVSET,rd=tmp.reg_id,bitwidth=self.bitwidth)
+        self.core.inst_buffer.append(inst)
+
+    def reset(self):
+        VectorVar.VVSET_BITWIDTH = self.old_bitwidth
+        VectorVar.VVSET_LENGTH = self.old_length
+
+        tmp = RegVar(self.core_id, imm=self.old_length)
+        inst = instruction(instruction.VVSET,rd=tmp.reg_id,bitwidth=self.bitwidth)
+        self.core.inst_buffer.append(inst)
+

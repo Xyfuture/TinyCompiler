@@ -54,11 +54,11 @@ class TensorVar:
         return self.addr_reg.reg_id
 
     def get_length_reg(self):
-        if 'addr_reg' in self.__dict__ :
-            return self.addr_reg.reg_id
-        tmp = RegVar(self.core_id,imm=self.vec_shape)
-        self.__setattr__('addr_reg',tmp)
-        return self.addr_reg.reg_id
+        if 'length_reg' in self.__dict__ :
+            return self.length_reg.reg_id
+        tmp = RegVar(self.core_id,imm=self.length)
+        self.__setattr__('length_reg',tmp)
+        return self.length_reg.reg_id
 
     def get_vec(self,indice,length): # indice 全部是int型即可
         assert len(indice) == self.dim

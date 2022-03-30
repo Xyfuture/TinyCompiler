@@ -7,6 +7,7 @@ class instruction:
 
     VMV = "vmv"
     VVADD = "vvadd"
+    VVSET = "vvset"
 
     SEND = 'send'
     RECV = 'recv'
