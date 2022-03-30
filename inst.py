@@ -6,6 +6,8 @@ class instruction:
     GVR = "gvr"
     VMV = "vmv"
     LDI = "ldi"
+    SEND = 'send'
+    RECV = 'recv'
     def __init__(self,op=None,**kwargs):
         self.op = op
         default_value = {'rd':0,'rs1':0,'rs2':0,'bitwidth':0,'imm':0}

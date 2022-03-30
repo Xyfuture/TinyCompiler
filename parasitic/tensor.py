@@ -1,4 +1,5 @@
 # import torch
+from inst import instruction
 from mem import mem_entry
 from .reg import RegVar
 from ..core import core_allocator
@@ -67,6 +68,19 @@ class TensorVar:
         vec_mem_offset += self.mem.addr # offset + start_posi
         new_mem = mem_entry(self.core_id,vec_mem_offset,length*self.bitwidth,self.bitwidth)
         return VectorVar(length,self.core_id,self.bitwidth,mem=new_mem)
+
+    def copy(self,src_ten):
+        assert self.mem.size == src_ten.mem.size
+        if self.core_id == src_ten.core_id:
+            inst = instruction(instruction.VMV,rd=self.get_addr_reg(),rs1=src_ten.get_addr_reg(),rs2=self.get_length_reg())
+            self.core.inst_buffer.append(inst)
+        else:
+            send_inst = instruction(instruction.SEND,rs1=src_ten.get_addr_reg(),rs2=src_ten.get_length_reg(),imm=self.core_id)
+            recv_inst = instruction(instruction.RECV,rs1=self.get_addr_reg(),rs2=self.get_length_reg(),imm=src_ten.core_id)
+
+            self.core.inst_buffer.append(recv_inst)
+            src_ten.core.inst_buffer.append(send_inst)
+
 
 
     def __del__(self):

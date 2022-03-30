@@ -35,11 +35,18 @@ class VectorVar:
         return self.addr_reg.reg_id
 
     def copy(self,src_vec): # 两个vec 之间直接复制
-        assert self.bitwidth*self.vec_shape == src_vec.bitwidth * src_vec.shape
+        # assert self.bitwidth*self.vec_shape == src_vec.bitwidth * src_vec.shape
+        assert self.mem.size == src_vec.mem.size
+        if (self.core_id == src_vec.core_id):
+            inst = instruction(instruction.VMV,rd=self.get_addr_reg(),rs1=src_vec.get_addr_reg(),rs2=self.get_length_reg())
+            self.core.inst_buffer.append(inst)
+        else:
+            # 跨核之间的通信
+            send_inst = instruction(instruction.SEND,rs1=src_vec.get_addr_reg(),rs2=src_vec.get_length_reg(),imm=self.core_id)
+            recv_inst = instruction(instruction.RECV,rs1=self.get_addr_reg(),rs2=self.get_length_reg(),imm=src_vec.core_id)
 
-        inst = instruction(instruction.VMV,rd=self.get_addr_reg(),rs1=src_vec.get_addr_reg(),rs2=self.get_length_reg())
-        self.core.inst_buffer.append(inst)
-
+            self.core.inst_buffer.append(recv_inst)
+            src_vec.core.inst_buffer.append(send_inst)
 
     def assign(self,func): # 用于算数运算时进行赋值，参数是个函数，主要用于回写地址啥的
         func(self) # 调用传过来的函数
@@ -55,8 +62,11 @@ class VectorVar:
             new_mem = mem_entry(self.core_id,new_mem_addr,new_vec_shape*self.bitwidth,self.bitwidth)
             return VectorVar(new_vec_shape,self.core_id,self.bitwidth,mem=new_mem)
         elif isinstance(item,int):
+            #  for register
             pass
 
+    def __add__(self, other):
+        pass
 
     def __del__(self):
         pass
