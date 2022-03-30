@@ -61,7 +61,7 @@ class VectorVar:
             inst=instruction(instruction.ST,rd=self.get_addr_reg(),rs1=item.reg_id,rs2=self.get_length_reg())
             self.core.inst_buffer.append(inst)
         elif isinstance(item,VectorVar):
-            self.core(item)
+            self.copy(item)
 
 
 

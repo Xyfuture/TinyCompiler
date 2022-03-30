@@ -69,6 +69,13 @@ class TensorVar:
         new_mem = mem_entry(self.core_id,vec_mem_offset,length*self.bitwidth,self.bitwidth)
         return VectorVar(length,self.core_id,self.bitwidth,mem=new_mem)
 
+    def get_vec_offset(self,offset,length): # 使用一维的绝对偏移获得位置
+        vec_mem_offset = offset*self.bitwidth
+        vec_mem_offset += self.mem.addr
+        new_mem = mem_entry(self.core_id,vec_mem_offset,length*self.bitwidth,self.bitwidth)
+        return VectorVar(length,self.core_id,self.bitwidth,mem=new_mem)
+
+
     def copy(self,src_ten):
         assert self.mem.size == src_ten.mem.size
         if self.core_id == src_ten.core_id:
