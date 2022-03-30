@@ -72,6 +72,8 @@ class TensorVar:
     def copy(self,src_ten):
         assert self.mem.size == src_ten.mem.size
         if self.core_id == src_ten.core_id:
+            assert self.mem != src_ten.mem # 本身是同一块就不用复制了
+
             inst = instruction(instruction.VMV,rd=self.get_addr_reg(),rs1=src_ten.get_addr_reg(),rs2=self.get_length_reg())
             self.core.inst_buffer.append(inst)
         else:

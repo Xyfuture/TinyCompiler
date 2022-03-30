@@ -18,10 +18,10 @@ class MatrixVar:
 
 
     def __mul__(self, vec):
-        def gen(dest_var):
+        def gen(dest_vec):
 
             self.core.inst_buffer.append(instruction(instruction.GEMV,rd=self.get_addr_reg(),rs1=vec.get_addr_reg(),rs2=vec.get_length_reg(),bitwidth=vec.bitwidth))
-            self.core.inst_buffer.append(instruction(instruction.GVR,rd=self.get_addr_reg(),rs1=dest_var.get_addr_reg(),rs2=self.get_length_reg(),))
+            self.core.inst_buffer.append(instruction(instruction.GVR, rd=self.get_addr_reg(), rs1=dest_vec.get_addr_reg(), rs2=self.get_length_reg(), ))
 
         return gen
 
