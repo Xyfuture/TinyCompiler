@@ -181,6 +181,7 @@ class tensor:
 
     def view(self,nshape):
         # 使用相同的内存
+        # 这个是有错的
         tmp_len = 1
         for i in nshape:
             tmp_len *= i

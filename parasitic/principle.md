@@ -24,3 +24,4 @@ VectorVar可以自建创建内存空间，这个时候内存是属于自己的�
 
 同时实现TensorVar和VectorVar主要是为了区分。所有的算数运算理论上应该只能由VectorVar操作，TensorVar在参与运算前应该提前转换为VectorVar	
 
+对于TensorVar不计划支持各类加减乘除等算数，仅仅支持copy操作，这类复杂的运算应该由VectorVar进行，这样也方便控制vvset
