@@ -1,16 +1,25 @@
+import copy
+
 import torch
+import math
 from ...core import core_allocator
 from ..tensor import TensorVar
 from ..matrix import MatrixVar
 from ..vector import VectorVar
 
-
+from ...utils import *
 class ConvLayer:
-    def __init__(self,conv_config:dict,input_shape,output_shape):
+    def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
         conv_args = ['in_channels', 'out_channels', 'kernel_size', 'stride',
                      'padding', 'group', 'bias', 'activation_func']
+        self.conv_args = conv_args
         for arg in conv_args:
             self.__setattr__(arg, conv_config[arg])
+
+        misc_args = ['mat_bitwidth','act_bitwidth']
+        for arg in misc_args:
+            self.__setattr__(arg,misc_args[arg])
+
 
         self.input_shape = input_shape # HWC
         self.output_shape = output_shape
@@ -20,11 +29,87 @@ class ConvLayer:
         self.out_act_shape = self.output_shape
 
         self.core_config = core_allocator.cfg
+        self.meu_ele_rows = self.core_config.meu_rows
+        self.meu_ele_columns = (self.core_config.meu_columns*self.core_config.meu_cell_bit)//self.mat_bitwidth
+
+        # 计算整个权重矩阵的形状
+        self.weight_mat_shape = [self.kernel_size[0]*self.kernel_size[1]*self.in_channels,self.out_channels]
+        self.rows,self.columns = self.weight_mat_shape
+
+        self.find_core_meu_layout()
+        self.allocate()
+
+
 
     def allocate(self):
+        # 创建convcore 并分配资源
+        self.conv_core_array = [[] for i in range(self.core_layout[0])]
+
+        for i,row_list in enumerate(self.conv_core_array):
+            for j in range(self.core_layout[1]):
+                misc_config={'in_act_pad_shape':self.in_act_pad_shape,'out_act_shape':self.out_act_shape,'meu_layout':self.meu_layout,
+                             'act_bitwidth':self.act_bitwidth,'mat_bitwidth':self.mat_bitwidth,'core_config':self.core_config}
+                tmp_posi = [slice(i*self.core_mat_rows,(i+1)*self.core_mat_rows),
+                            slice(j*self.core_mat_columns,(j+1)*self.core_mat_columns)]
+                tmp_core_mat_shape = [self.core_mat_rows,self.core_mat_columns]
+                if (i+1)*self.core_mat_rows > self.rows:
+                    tmp_core_mat_shape[0] = self.rows - i*self.core_mat_rows
+                    tmp_posi[0].stop = self.rows
+                if (j+1)*self.core_mat_columns > self.columns:
+                    tmp_core_mat_shape[1] = self.core_mat_columns - j*self.core_mat_columns
+                    tmp_posi[1].stop = self.columns
+                misc_config['posi']=tmp_posi
+                aggregate = False
+                if j == self.core_layout[1]-1:
+                    aggregate = True
+                tmp_core_mat = ConvCore(self.conv_config,misc_config,aggregate)
+                row_list.append(tmp_core_mat)
+
+
+
+
+
+    def find_core_meu_layout(self):
+        def get_core_layout(meu_layout):
+            core_mat_rows = self.meu_ele_rows * meu_layout[0]
+            core_mat_columns = self.meu_ele_columns * meu_layout[1]
+
+            core_rows = math.ceil(self.rows/core_mat_rows)
+            core_columns = math.ceil(self.columns/core_mat_columns)
+            return (core_rows,core_columns)
+
+        def get_core_cnt(meu_layout):
+            r,c = get_core_layout(meu_layout)
+            return r*c
+
+        candidate_meu_layout = number_decompose(self.core_config.meu_cnt)
+
+        best_core_cnt = get_core_cnt(candidate_meu_layout[0])
+        best_meu_layout = candidate_meu_layout[0]
+        for meu_layout in candidate_meu_layout:
+            if get_core_cnt(meu_layout) < best_core_cnt:
+                best_core_cnt = get_core_cnt(meu_layout)
+                best_meu_layout = meu_layout
+
+        self.meu_layout = best_meu_layout
+        self.used_core_cnt = best_core_cnt
+        self.core_layout = get_core_layout(self.meu_layout)
+
+        #每个核代表的小矩阵的行数和列数，都是理想情况下的，实际的可能有出入
+        self.core_mat_rows = self.meu_ele_rows*self.meu_layout[0]
+        self.core_mat_columns = self.meu_ele_columns*self.meu_layout[1]
+        self.core_mat_shape = (self.core_mat_rows,self.core_mat_columns)
+
+
+
+    def recv_act(self):
         pass
 
+    def compute(self):
+        pass
 
+    def send_act(self):
+        pass
 
     def forward(self,act_ten):
         # 分为三个阶段 首先是接收来自上一层的数据，然后是进行卷积运算，在计算actfunc，最后送到下一层
@@ -98,8 +183,7 @@ class ConvCore:
 
         # 这里还没有考虑量化，bias，act function的资源资源分配
 
-    def im2col(self):
-        pass
+
 
 
     def compute(self,i,j,pre=None):
@@ -124,11 +208,6 @@ class ConvCore:
 
         return result_vec
 
-
-
-
-
-        pass
 
 
 
