@@ -123,15 +123,27 @@ class TensorVar:
 
     def __getitem__(self, item):
         assert len(item) == self.dim
+        nlist = []
         for i,s in enumerate(item):
+            if isinstance(s,int):
+                s = slice(s,s+1)
+            elif isinstance(s,slice):
+                if not s.start:
+                    s.start = 0
+                if not s.stop:
+                    s.stop = self.ten_shape[i]
+            nlist.append(s)
             assert s.start>=0 and s.stop <=self.ten_shape[i] , "dim not equal"
+
+        item = nlist
 
         nshape = [s.stop - s.start for s in item]
         nstart_offset = self.start_mem_offset
         for i, s in enumerate(item):
             nstart_offset += s.start * self.mem_offset[i]
 
-        reverse_item = copy.deepcopy(item).reverse()
+        reverse_item = copy.deepcopy(item)
+        reverse_item.reverse()
         c_dim = 0
         for i,s in enumerate(reverse_item):
             if s.stop-s.start != self.ten_shape[self.dim-i-1]:

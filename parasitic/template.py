@@ -44,7 +44,7 @@ def conv_v3 (mat:MatrixVar,act:TensorVar,kernel_size,out_channels,stride,output_
                 im2col_vec[t*wc_len:(t+1)*wc_len].copy(act.get_vec([i+t,j,0],wc_len))
             new_act.get_vec([i,j,0],out_channels).assign(mat*im2col_vec)
 
-def concat(self,ten_list:List[TensorVar],dim):
+def concat(ten_list:List[TensorVar],dim):
     def check(a,b):
         assert a == dims
         assert b == dims
@@ -91,4 +91,26 @@ def concat(self,ten_list:List[TensorVar],dim):
     return gen
 
 
+def concat_v2(ten_list:List[TensorVar],dim):
+    def check(a,b):
+        assert a == dims
+        assert b == dims
+        assert a.bitwidth == b.bitwidth
+
+        for i in range(dims):
+            if i != dims:
+                assert a.ten_shape[i] == b.ten_shape[i]
+    # 检查维度的匹配情况
+    sample = ten_list[0]
+    dims = sample.dim
+
+    for i in range(len(ten_list)-1):
+        check(ten_list[i],ten_list[i+1])
+
+
+    def gen(result_ten:TensorVar):
+        pass
+
+
+    return gen
 

@@ -3,12 +3,12 @@ from ..core import core_allocator
 from reg import *
 
 class MatrixVar:
-    def __init__(self,mat_shape,core_id,packet_id,meu_id_list,bitwidth,**kwargs):
-        self.mat_shape = mat_shape
+    def __init__(self,mat_shape,core_id,packet_id,meu_list,bitwidth,**kwargs):
+        self.mat_shape = mat_shape # 整个矩阵的形状
         self.core_id = core_id
         self.core = core_allocator.access_core(core_id)
         self.packet_id = packet_id
-        self.meu_id_list = meu_id_list
+        self.meu_list = meu_list
         self.bitwidth = bitwidth
 
         self.rows,self.columns = self.mat_shape
@@ -25,7 +25,7 @@ class MatrixVar:
 
         return gen
 
-
+    # 暂时还没有做懒更新
     def get_addr_reg(self):
         return self.addr_reg.reg_id
 

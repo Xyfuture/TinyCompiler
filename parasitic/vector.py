@@ -130,6 +130,8 @@ class VectorSet:
         pass
 
     def set(self):
+        if self.bitwidth == VectorVar.VVSET_BITWIDTH and self.length == VectorVar.VVSET_LENGTH:
+            return
         self.old_bitwidth = VectorVar.VVSET_BITWIDTH
         self.old_length = VectorVar.VVSET_LENGTH
 
