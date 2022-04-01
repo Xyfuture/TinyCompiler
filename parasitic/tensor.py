@@ -20,12 +20,14 @@ class TensorVar:
             self.length *= i
 
         self.location = 'stack' # kwargs will check below
+        if 'location' in kwargs:
+            self.location = kwargs['location']
 
         if 'mem' in kwargs:
             self.mem = kwargs['mem']
             self.mem_owner = False
         else:
-            self.mem = self.core.mem_allocator.get_mem(self.length*self.bitwidth,self.location)
+            self.mem = self.core.mem_allocator.get_mem(self.length*self.bitwidth,self.bitwidth,self.location)
             self.mem_owner = True
 
         # 对于完全连续的TensorVar设置各类偏移信息
@@ -44,7 +46,7 @@ class TensorVar:
 
 
         # 对于不连续的情况 读取参数
-        para = ['sliced','continue_dim','continue_length','logic_offset','mem_offset','start_mem_offset','location']
+        para = ['sliced','continue_dim','continue_length','logic_offset','mem_offset','start_mem_offset']
 
         for p in para:
             if p in kwargs:

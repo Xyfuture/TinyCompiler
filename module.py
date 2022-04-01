@@ -5,7 +5,7 @@ from .tensor import *
 import collections
 
 
-# assume one module only generate one tensor to next
+# assume one modules only generate one tensor to next
 
 class module(metaclass=ABCMeta):
     def __init__(self):
@@ -22,7 +22,7 @@ class module(metaclass=ABCMeta):
         pass
 
     def backward(self, relation_tensor: vtensor):
-        assert relation_tensor in self.out_tensors, "ERROR: relation tensor not in pre module"
+        assert relation_tensor in self.out_tensors, "ERROR: relation tensor not in pre modules"
         assert relation_tensor not in self.post_modules, "ERROR: relation tensor has been processed"
 
         self.post_modules[relation_tensor] = relation_tensor.post_module

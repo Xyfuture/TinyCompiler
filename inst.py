@@ -8,6 +8,11 @@ class instruction:
     VMV = "vmv"
     VVADD = "vvadd"
     VVSET = "vvset"
+    VVSRL = 'vvsrl'
+    VVSLL = 'vvsll'
+    VRELU = 'vrelu'
+    VSIGMOID = 'vsigmoid'
+    VTANH = 'vtanh'
 
     SEND = 'send'
     RECV = 'recv'

@@ -2,10 +2,12 @@ import copy
 
 import torch
 import math
+
+from ..functions.act_func import get_act_func
 from ...core import core_allocator
 from ..tensor import TensorVar
 from ..matrix import MatrixVar
-from ..vector import VectorVar
+from ..vector import VectorVar,VectorSet
 
 from ...utils import *
 class ConvLayer:
@@ -58,7 +60,12 @@ class ConvLayer:
                 if (j+1)*self.core_mat_columns > self.columns:
                     tmp_core_mat_shape[1] = self.core_mat_columns - j*self.core_mat_columns
                     tmp_posi[1].stop = self.columns
+
                 misc_config['posi']=tmp_posi
+                misc_config['out_act_shape'] = [self.output_shape[0],self.output_shape[1],tmp_core_mat_shape[1]]
+                # 上面这个是实际的输出保存的形状，core_mat_rows/columns 都是比较理想的情况
+                misc_config['mat_shape'] = tmp_core_mat_shape
+
                 aggregate = False
                 if j == self.core_layout[1]-1:
                     aggregate = True
@@ -102,11 +109,22 @@ class ConvLayer:
 
 
 
-    def recv_act(self):
-        pass
+    def recv_act(self,pre_act_func):
+        for row_list in self.conv_core_array:
+            for cur_core in row_list:
+                cur_core.recv_act(pre_act_func)
+
+
 
     def compute(self):
-        pass
+        # 注意最后的收集节点
+        for i in range(0,self.in_act_pad_shape[0]-self.kernel_size[0]+1,self.stride[0]): # 暂时还没有验证这个范围对不对
+            for j in range(0,self.in_act_pad_shape[1]-self.kernel_size[1]+1,self.stride[1]):
+                tmp_vec_list = [None for _ in range(self.core_layout[1])]
+                for cur_conv_core_list in self.conv_core_array:
+                    for t,cur_conv_core in enumerate(cur_conv_core_list):
+                        tmp_vec = cur_conv_core.compute(i,j,tmp_vec_list[t])
+                        tmp_vec_list[t] = tmp_vec
 
     def send_act(self):
         pass
@@ -149,7 +167,10 @@ class ConvCore:
         # 分配input 和 output feature map 的内存
         self.in_act_ten = TensorVar(self.in_act_pad_shape,self.core_id,self.act_bitwidth,loaction='heap')
         if self.aggregate:
+            self.shift_vec = VectorVar(self.columns,self.core_id,4,location='heap')
+            # 这里这个输出tensor应该是已经shift完的，就是原始act-bitwidth
             self.out_act_ten = TensorVar(self.out_act_shape,self.core_id,self.act_bitwidth,location='heap')
+
         # 分配weight matrix 对应的meu
 
         self.rows,self.columns = self.mat_shape
@@ -183,31 +204,66 @@ class ConvCore:
 
         # 这里还没有考虑量化，bias，act function的资源资源分配
 
-
+    def recv_act(self,pre_act_func):
+        assert callable(pre_act_func)
+        pre_act_func(self.in_act_ten)
 
 
     def compute(self,i,j,pre=None):
         '''
         计算一个卷积窗口的情况，pre是上一部分送来的结果
+        目前还没有设置 vvset的相关信息
         '''
+        vv_set_act_bit = VectorSet(self.core_id,self.act_bitwidth,self.columns)
+        vv_set_4bit = VectorSet(self.core_id,4,self.columns) # 向量相加等操作时的bitwidth和length
+
         window_length = self.kernel_height * self.kernel_width * self.out_channels # 整个卷积窗口的大小
         wc_length = self.kernel_width*self.out_channels # 一个窗口中act连续的大小
 
         im2col_vec = VectorVar(window_length,self.core_id,self.act_bitwidth)
-        for c in range(self.kernel_height):
-            im2col_vec[c * wc_length:(c + 1) * wc_length].copy(self.in_act_ten.get_vec([c,j,0],wc_length))
+
+        with vv_set_act_bit:
+            for c in range(self.kernel_height):
+                im2col_vec[c * wc_length:(c + 1) * wc_length].copy(self.in_act_ten.get_vec([i+c,j,0],wc_length))
         act_part = im2col_vec[self.posi[0]] # 节选出当前core需要的一个窗口中的部分
 
         result_vec = VectorVar(self.columns,self.core_id,4) # 计算得到的最终结果
         result_vec.assign(0)
         tmp_vec = VectorVar(self.columns,self.core_id,4)
-        for c,cur_mat in enumerate(self.meu_line_list):
-            cur_act_part = act_part[self.meu_line_posi[c]]
-            tmp_vec.assign(cur_mat*cur_act_part)
-            result_vec.assign(result_vec+tmp_vec)
+
+        with vv_set_4bit:
+            for c,cur_mat in enumerate(self.meu_line_list):
+                cur_act_part = act_part[self.meu_line_posi[c]]
+                tmp_vec.assign(cur_mat*cur_act_part)
+                result_vec.assign(result_vec+tmp_vec)
+            # 与之前的结果相加
+            if pre:
+                result_vec.assign(result_vec+pre)
+
+        # 收集节点操作
+        # 加入激活函数的部分，收集节点负责这件事
+        if self.aggregate:
+            with vv_set_4bit:
+                shifted_vec = VectorVar(self.columns,self.core_id,self.act_bitwidth)
+                shifted_vec.assign(result_vec>>self.shift_vec)
+
+            # relu函数激活
+            with vv_set_act_bit:
+                func = get_act_func(self.activation_func)
+                shifted_vec.assign(func(shifted_vec)) # relu 还没有实现
+
+            # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这首歌偏移
+            with vv_set_act_bit:
+                out_i = i/self.stride[0]
+                out_j = j/self.stride[1]
+
+                self.out_act_ten.get_vec([out_i,out_j,0],self.columns).assign(shifted_vec)
 
         return result_vec
 
+    def send_act(self):
+        assert self.aggregate
 
+        return self.out_act_ten
 
 

@@ -7,8 +7,8 @@ vector 最重要的区别是存有一个addr_reg和一个length_reg，这使得�
 '''
 class VectorVar:
 
-    VVSET_BITWIDTH = 1
-    VVSET_LENGTH = 128
+    VVSET_BITWIDTH = {} # 两个dict，core_id:value
+    VVSET_LENGTH = {}
 
     def __init__(self,vec_shape,core_id,bitwidth,**kwargs):
         # shape 就是length，只是为了统一名字
@@ -16,12 +16,19 @@ class VectorVar:
         self.core_id = core_id
         self.core = core_allocator.access_core(self.core_id)
         self.bitwidth = bitwidth
+
+        self.location = 'stack'
+        if 'location' in kwargs:
+            self.location = kwargs['location']
+
         if 'mem' in kwargs:
             self.mem = kwargs['mem']
             self.mem_owner = False
         else :
-            self.mem = self.core.mem_allocator.get_stack_mem(self.vec_shape*self.bitwidth)
+            self.mem = self.core.mem_allocator.get_mem(self.vec_shape*self.bitwidth,self.bitwidth,location=self.location)
             self.mem_owner = True
+
+
 
 
     def get_addr_reg(self):
@@ -103,6 +110,10 @@ class VectorVar:
     def __radd__(self, other):
         return self.__add__(other)
 
+    def __rshift__(self, other):
+        pass
+
+
 
     def __del__(self):
         pass
@@ -130,21 +141,23 @@ class VectorSet:
         pass
 
     def set(self):
-        if self.bitwidth == VectorVar.VVSET_BITWIDTH and self.length == VectorVar.VVSET_LENGTH:
-            return
-        self.old_bitwidth = VectorVar.VVSET_BITWIDTH
-        self.old_length = VectorVar.VVSET_LENGTH
 
-        VectorVar.VVSET_BITWIDTH = self.bitwidth
-        VectorVar.VVSET_LENGTH = self.length
+        if self.bitwidth == VectorVar.VVSET_BITWIDTH.get(self.core_id) and self.length == VectorVar.VVSET_LENGTH.get(self.core_id):
+            return
+        if self.core_id in VectorVar.VVSET_LENGTH:
+            self.old_bitwidth = VectorVar.VVSET_BITWIDTH[self.core_id]
+            self.old_length = VectorVar.VVSET_LENGTH[self.core_id]
+
+        VectorVar.VVSET_BITWIDTH[self.core_id] = self.bitwidth
+        VectorVar.VVSET_LENGTH[self.core_id] = self.length
 
         tmp = RegVar(self.core_id, imm=self.length)
         inst = instruction(instruction.VVSET,rd=tmp.reg_id,bitwidth=self.bitwidth)
         self.core.inst_buffer.append(inst)
 
-    def reset(self):
-        VectorVar.VVSET_BITWIDTH = self.old_bitwidth
-        VectorVar.VVSET_LENGTH = self.old_length
+    def reset(self): # may not use
+        VectorVar.VVSET_BITWIDTH[self.core_id] = self.old_bitwidth
+        VectorVar.VVSET_LENGTH[self.core_id] = self.old_length
 
         tmp = RegVar(self.core_id, imm=self.old_length)
         inst = instruction(instruction.VVSET,rd=tmp.reg_id,bitwidth=self.bitwidth)
