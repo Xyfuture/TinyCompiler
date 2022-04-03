@@ -1,6 +1,12 @@
+from typing import List
+
 from TinyDSL.HwResource.core import core_allocator
 from TinyDSL.HwResource.core import *
 from TinyDSL.HwResource.mem import *
+import math
+
+
+
 
 class vtensor:
     def __init__(self,shape,bitwidth,name='vtensor'):
@@ -38,7 +44,7 @@ class vtensor:
 
 
 
-
+# unused currently
 class tensor:
     def __init__(self,core_id,shape,bitwidth,location,**kwargs):
         self.core_id = core_id
@@ -161,7 +167,7 @@ class tensor:
         return tmp_mem
 
 
-    def __getitem__(self, item)->tensor:
+    def __getitem__(self, item):
         assert len(item)==self.dim , "dim not equal"
         #check
         for i,s in enumerate(item):

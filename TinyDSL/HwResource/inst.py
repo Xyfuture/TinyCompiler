@@ -32,3 +32,9 @@ class instruction:
             else :
                 self.__setattr__(k,v)
         self.funct5 = 0
+
+    def __str__(self):
+        tmp = ''
+        for k,v in self.__dict__.items():
+            tmp += k+':'+str(v)+'  '
+        return tmp

@@ -1,4 +1,7 @@
-from reg import RegVar
+from TinyDSL.DataType.reg import RegVar
+from TinyDSL.HwResource.core import core_allocator
+from TinyDSL.HwResource.inst import instruction
+from TinyDSL.HwResource.mem import mem_entry
 
 '''
 vector 最重要的区别是存有一个addr_reg和一个length_reg，这使得这个万一直接支持参与指令的运算
@@ -44,8 +47,8 @@ class VectorVar:
         return self.length_reg.reg_id
 
     def check_vvset(self):
-        assert VectorVar.VVSET_LENGTH == self.vec_shape , "vvset:length not equal"
-        assert VectorVar.VVSET_BITWIDTH == self.bitwidth , "vvset:bitwidth not equal"
+        assert VectorVar.VVSET_LENGTH[self.core_id] == self.vec_shape , "vvset:length not equal"
+        assert VectorVar.VVSET_BITWIDTH[self.core_id] == self.bitwidth , "vvset:bitwidth not equal"
 
     def copy(self,src_vec): # 两个vec 之间直接复制
         # assert self.bitwidth*self.vec_shape == src_vec.bitwidth * src_vec.shape

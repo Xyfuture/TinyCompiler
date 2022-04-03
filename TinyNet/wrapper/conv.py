@@ -1,6 +1,7 @@
-from .module import *
-from matrix import *
-from activation import *
+from TinyNet.wrapper.module import module
+import torch.nn as nn
+from TinyNet.wrapper.tensor import vtensor
+from TinyNet.wrapper.utils import gen_vtensor
 
 
 class conv2d(module):

@@ -1,5 +1,6 @@
-from mem import mem_entry,Mem_allocator,Reg_allocator
-from config import core_config,core_cfg
+from TinyDSL.HwResource.mem import mem_entry, Mem_allocator
+from TinyDSL.HwResource.reg import Reg_allocator
+from TinyDSL.HwResource.config import core_config, core_cfg
 from TinyDSL.Utils.base import *
 
 class core:
@@ -7,14 +8,14 @@ class core:
 
         self.core_id = core_id
         self.inst_buffer = linkList()
-        self.cfg = core_allocator.cfg
+        self.cfg = core_config
         self.meu_cnt = self.cfg.meu_cnt
 
         self.mem_allocator = Mem_allocator(self.cfg.omu_size,self.core_id)
         self.reg_allocator = Reg_allocator()
 
         self.meu_state = bitmap(self.meu_cnt)
-        self.meu_list = [meu(core_id,i,self.cfg) for i in range(self.meu_cnt)]
+        self.meu_list = [meu(core_id,i) for i in range(self.meu_cnt)]
 
     def get_meu(self,cnt=1):
         meu_id_list = self.meu_state.get_free(cnt)
@@ -37,7 +38,7 @@ class Core_allocator:
     def get_core(self):
         tmp = self.core_allocate_state.get_free(1,"allocated")
         # self.core_allocate_state[tmp] = "allocated"
-        return tmp,self.core_list[tmp]
+        return tmp
 
     def release_core(self,core_id):
         self.core_allocate_state[core_id] = "unused"
@@ -61,15 +62,9 @@ class meu:
         self.meu_id = meu_id
         self.matrix = None
         self.posi = None
-        self.cfg = core_allocator.cfg
-
+        self.cfg = core_config
         self.shape = None
         self.group = None
-
-
-    def map_to_matrix(self,group:meu_group,shape):
-
-        self.shape = shape # real shape in meu
 
 
 class meu_group:

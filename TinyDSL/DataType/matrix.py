@@ -1,6 +1,6 @@
 from TinyDSL.HwResource.core import core_allocator
 from TinyDSL.HwResource.inst import instruction
-from reg import RegVar
+from TinyDSL.DataType.reg import RegVar
 
 class MatrixVar:
     def __init__(self,mat_shape,core_id,packet_id,meu_list,bitwidth,**kwargs):

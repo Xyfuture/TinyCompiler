@@ -1,5 +1,6 @@
 from TinyDSL.HwResource.core import *
 from TinyDSL.HwResource.inst import *
+
 class RegVar:
     def __init__(self,core_id,**kwargs):
         self.core_id = core_id
@@ -11,7 +12,7 @@ class RegVar:
             self.reg_compute_write(kwargs['reg_compute_result'])
 
     def imm_write(self,value):
-        self.core.inst_buffer.append(instruction(instruction.LDI,imm=value))
+        self.core.inst_buffer.append(instruction(instruction.LDI,rd=self.reg_id,imm=value))
 
     def mem_write(self):
         pass

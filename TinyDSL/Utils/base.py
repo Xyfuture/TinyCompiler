@@ -19,12 +19,15 @@ class linkNode:
         tmp = linkNode(value,**kwargs)
         tmp.pre = self.pre
         tmp.next = self
+        self.pre.next = tmp
         self.pre = tmp
 
     def insert_next(self,value,**kwargs):
         tmp = linkNode(value,**kwargs)
+
         tmp.next = self.next
         tmp.pre = self
+        self.next.pre = tmp
         self.next = tmp
 
     def __next__(self):
@@ -52,6 +55,7 @@ class linkList:
         tmp = ""
         while cur is not self.tail:
             tmp += cur.value.__str__() + "\n"
+            cur = cur.next
         return tmp
 
     def __iter__(self):
@@ -74,7 +78,7 @@ class bitmap:
     def get_free(self,cnt=1,new_state=True,**kwargs):
         if cnt == 1:
             for i,s in enumerate(self.state):
-                if s is self.free_state:
+                if s == self.free_state:
                     if not kwargs.get('unset'):
                         self.state[i] = new_state
                     return i

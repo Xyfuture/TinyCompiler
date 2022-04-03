@@ -3,6 +3,10 @@ from TinyDSL.DataType.tensor import TensorVar
 from TinyDSL.DataType.matrix import MatrixVar
 from TinyDSL.DataType.vector import VectorVar,VectorSet
 from TinyDSL.Utils.utils import *
+from TinyDSL.HwResource.config import core_config
+from TinyDSL.HwResource.core import core_allocator
+
+
 
 class ConvLayer:
     def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
@@ -14,7 +18,7 @@ class ConvLayer:
 
         misc_args = ['mat_bitwidth','act_bitwidth']
         for arg in misc_args:
-            self.__setattr__(arg,misc_args[arg])
+            self.__setattr__(arg,misc_config[arg])
 
 
         self.input_shape = input_shape # HWC
@@ -24,9 +28,9 @@ class ConvLayer:
         self.in_act_pad_shape = [self.input_shape[i]+self.padding[i] for i in range(2)]+[self.input_shape[2]]
         self.out_act_shape = self.output_shape
 
-        self.core_config = core_allocator.cfg
+        self.core_config = core_config
         self.meu_ele_rows = self.core_config.meu_rows
-        self.meu_ele_columns = (self.core_config.meu_columns*self.core_config.meu_cell_bit)//self.mat_bitwidth
+        self.meu_ele_columns = (self.core_config.meu_columns*self.core_config.meu_cell_bit)//(self.mat_bitwidth*8)
 
         # 计算整个权重矩阵的形状
         self.weight_mat_shape = [self.kernel_size[0]*self.kernel_size[1]*self.in_channels,self.out_channels]
@@ -45,15 +49,17 @@ class ConvLayer:
             for j in range(self.core_layout[1]):
                 misc_config={'in_act_pad_shape':self.in_act_pad_shape,'out_act_shape':self.out_act_shape,'meu_layout':self.meu_layout,
                              'act_bitwidth':self.act_bitwidth,'mat_bitwidth':self.mat_bitwidth,'core_config':self.core_config}
-                tmp_posi = [slice(i*self.core_mat_rows,(i+1)*self.core_mat_rows),
-                            slice(j*self.core_mat_columns,(j+1)*self.core_mat_columns)]
+                tmp_posi = [[i*self.core_mat_rows,(i+1)*self.core_mat_rows],
+                            [j*self.core_mat_columns,(j+1)*self.core_mat_columns]]
                 tmp_core_mat_shape = [self.core_mat_rows,self.core_mat_columns]
                 if (i+1)*self.core_mat_rows > self.rows:
                     tmp_core_mat_shape[0] = self.rows - i*self.core_mat_rows
-                    tmp_posi[0].stop = self.rows
+                    tmp_posi[0][1] = self.rows
                 if (j+1)*self.core_mat_columns > self.columns:
                     tmp_core_mat_shape[1] = self.core_mat_columns - j*self.core_mat_columns
-                    tmp_posi[1].stop = self.columns
+                    tmp_posi[1][1] = self.columns
+
+                tmp_posi = [slice(tmp_posi[i][0],tmp_posi[i][1]) for i in range(2)]
 
                 misc_config['posi']=tmp_posi
                 misc_config['out_act_shape'] = [self.output_shape[0],self.output_shape[1],tmp_core_mat_shape[1]]
@@ -151,7 +157,7 @@ class ConvCore:
         misc_args = ['in_act_pad_shape','out_act_shape','meu_layout','mat_shape',
                      'act_bitwidth','mat_bitwidth','core_config','posi']
         for arg in misc_args:
-            self.__setattr__(arg,misc_args)
+            self.__setattr__(arg,misc_config[arg])
 
         self.aggregate = aggregate # 是否是最后的聚集节点
 
@@ -173,7 +179,7 @@ class ConvCore:
         self.rows,self.columns = self.mat_shape
 
         self.meu_ele_rows = self.core_config.meu_rows
-        self.meu_ele_columns = (self.core_config.meu_columns * self.core_config.meu_cell_bit)//self.mat_bitwidth
+        self.meu_ele_columns = (self.core_config.meu_columns * self.core_config.meu_cell_bit)//(self.mat_bitwidth*8)
 
         self.meu_line_rows = self.meu_ele_rows # 多个meu组成一行，可以并行，称为meu_line
         self.meu_line_columns = self.meu_ele_columns * self.meu_layout[1]
@@ -186,14 +192,17 @@ class ConvCore:
             tmp_meu_list = self.core.get_meu(self.meu_layout[1])
             self.meu_map[i] = tmp_meu_list # 记录packet_id 到meu 的映射
 
-            # 计算MatrixVar形状
-            tmp_posi = slice(i*self.meu_line_rows,(i+1)*self.meu_line_rows)
+            # 计算MatrixVar形状,slice 是不可变的
+            tmp_posi = [i*self.meu_line_rows,(i+1)*self.meu_line_rows]
             tmp_mat_shape = [self.meu_line_rows,self.meu_line_columns]
             if (i+1)*self.meu_line_rows>self.rows:
                 tmp_mat_shape[0] = self.rows - i*self.meu_line_rows
-                tmp_posi.stop = self.rows
+                tmp_posi[1] = self.rows
             if self.meu_line_columns > self.columns:
                 tmp_mat_shape[1] = self.columns
+
+            tmp_posi = slice(tmp_posi[0],tmp_posi[1])
+
 
             tmp_mat = MatrixVar(tmp_mat_shape,self.core_id,i,tmp_meu_list,self.mat_bitwidth)
             self.meu_line_list.append(tmp_mat)

@@ -1,5 +1,4 @@
-from core import core_allocator
-from TinyDSL.Utils.base import *
+# from core import core_allocator
 
 class mem_entry:
     def __init__(self, core_id,addr, size, bitwidth, **kwargs):
@@ -80,15 +79,5 @@ class Mem_allocator:
     def check_size(self):
         assert self.mem_used <= self.max_size, "ERROR: mem size overflow"
 
-class Reg_allocator:
-    # 64bit reg with count of 32
-    def __init__(self):
-        self.reg_bitmap = bitmap(core_allocator.cfg.reg_cnt)
-
-    def get_reg(self):
-        return self.reg_bitmap.get_free()
-
-    def release_stack_reg(self,id):
-        self.reg_bitmap.free(id)
 
 

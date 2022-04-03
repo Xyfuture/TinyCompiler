@@ -1,4 +1,4 @@
-from .tensor import *
+from TinyNet.wrapper.tensor import *
 from collections import OrderedDict
 
 
