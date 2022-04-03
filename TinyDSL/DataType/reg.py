@@ -37,7 +37,8 @@ class RegVar:
 
 
     def __del__(self):
-        pass
+        self.core.reg_allocator.release_reg(self.reg_id)
+
 
     def __add__(self, other):
         assert self.core_id == other.core_id

@@ -9,5 +9,5 @@ class Reg_allocator:
     def get_reg(self):
         return self.reg_bitmap.get_free()
 
-    def release_stack_reg(self,id):
+    def release_reg(self,id):
         self.reg_bitmap.free(id)

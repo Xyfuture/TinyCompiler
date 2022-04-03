@@ -30,8 +30,6 @@ class VectorVar:
             self.mem_owner = True
 
 
-
-
     def get_addr_reg(self):
         if 'addr_reg' in self.__dict__ :
             return self.addr_reg.reg_id
@@ -113,7 +111,6 @@ class VectorVar:
 
     def __rshift__(self, other):
         pass
-
 
 
     def __del__(self):
