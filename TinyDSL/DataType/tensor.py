@@ -1,8 +1,8 @@
 # import torch
 from TinyDSL.HwResource.mem import mem_entry
-from .reg import RegVar
+from reg import RegVar
 from TinyDSL.HwResource.core import core_allocator
-from .vector import VectorVar
+from vector import VectorVar
 import copy
 
 # 创建实例必定申请内存

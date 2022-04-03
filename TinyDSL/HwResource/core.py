@@ -1,7 +1,6 @@
-from .mem import *
-from tensor import *
-from .mem import *
-from .config import *
+from mem import mem_entry,Mem_allocator,Reg_allocator
+from config import core_config,core_cfg
+from TinyDSL.Utils.base import *
 
 class core:
     def __init__(self,core_id,**kwargs):

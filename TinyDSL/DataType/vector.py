@@ -1,4 +1,4 @@
-from reg import *
+from reg import RegVar
 
 '''
 vector 最重要的区别是存有一个addr_reg和一个length_reg，这使得这个万一直接支持参与指令的运算

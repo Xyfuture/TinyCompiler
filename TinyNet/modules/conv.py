@@ -1,9 +1,9 @@
-from ..functions.act_func import get_act_func
-from parasitic.DataType.tensor import TensorVar
-from parasitic.DataType.matrix import MatrixVar
-from parasitic.DataType.vector import VectorVar,VectorSet
-
+from TinyNet.functions.act_func import get_act_func
+from TinyDSL.DataType.tensor import TensorVar
+from TinyDSL.DataType.matrix import MatrixVar
+from TinyDSL.DataType.vector import VectorVar,VectorSet
 from TinyDSL.Utils.utils import *
+
 class ConvLayer:
     def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
         conv_args = ['in_channels', 'out_channels', 'kernel_size', 'stride',
