@@ -1,7 +1,5 @@
-import torch
-import torch.nn as nn
 from .module import *
-from .utils import *
+from TinyDSL.Utils.utils import *
 
 
 class linear(module):

@@ -1,15 +1,9 @@
-import copy
-
-import torch
-import math
-
 from ..functions.act_func import get_act_func
-from ...core import core_allocator
-from ..tensor import TensorVar
-from ..matrix import MatrixVar
-from ..vector import VectorVar,VectorSet
+from parasitic.DataType.tensor import TensorVar
+from parasitic.DataType.matrix import MatrixVar
+from parasitic.DataType.vector import VectorVar,VectorSet
 
-from ...utils import *
+from TinyDSL.Utils.utils import *
 class ConvLayer:
     def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
         conv_args = ['in_channels', 'out_channels', 'kernel_size', 'stride',

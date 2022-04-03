@@ -1,6 +1,5 @@
 from .mem import *
-from .tensor import *
-from .base import *
+from tensor import *
 from .mem import *
 from .config import *
 

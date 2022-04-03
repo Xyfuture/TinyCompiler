@@ -1,7 +1,6 @@
-import torch
-from .matrix import *
-from .vector import *
-from .tensor import *
+from parasitic.DataType.matrix import *
+from parasitic.DataType.vector import *
+from parasitic.DataType.tensor import *
 
 
 def conv(mat,act,kernel,out_channels,stride):

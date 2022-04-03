@@ -1,5 +1,3 @@
-import torch
-from ..core import core_allocator
 from reg import *
 
 '''

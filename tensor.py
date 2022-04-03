@@ -1,10 +1,6 @@
-import torch
-import torch.nn as nn
-from typing import List
-
-from core import core_allocator
-from .core import *
-from .mem import *
+from TinyDSL.HwResource.core import core_allocator
+from TinyDSL.HwResource.core import *
+from TinyDSL.HwResource.mem import *
 
 class vtensor:
     def __init__(self,shape,bitwidth,name='vtensor'):

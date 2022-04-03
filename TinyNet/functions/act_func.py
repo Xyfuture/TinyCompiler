@@ -1,6 +1,4 @@
-import torch
-
-from inst import instruction
+from TinyDSL.HwResource.inst import instruction
 
 
 class ActivationFunc:

@@ -1,6 +1,4 @@
-import torch
-import torch.nn as nn
-from .module import *
+from TinyNet.wrapper.module import *
 
 class maxPooling(module):
     def __init__(self):

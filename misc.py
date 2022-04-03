@@ -1,7 +1,5 @@
-import torch
-import torch.nn as nn
-from .module import *
-from .utils import *
+from TinyNet.wrapper.module import *
+from TinyDSL.Utils.utils import *
 
 
 # transmit

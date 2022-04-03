@@ -1,9 +1,6 @@
-import torch
-import torch.nn as nn
 from .module import *
-from .utils import *
-from .matrix import *
-from .activation import *
+from matrix import *
+from activation import *
 
 
 class conv2d(module):

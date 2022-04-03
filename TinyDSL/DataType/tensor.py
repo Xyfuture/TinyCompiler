@@ -1,8 +1,7 @@
 # import torch
-from inst import instruction
-from mem import mem_entry
+from TinyDSL.HwResource.mem import mem_entry
 from .reg import RegVar
-from ..core import core_allocator
+from TinyDSL.HwResource.core import core_allocator
 from .vector import VectorVar
 import copy
 

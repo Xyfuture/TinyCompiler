@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from abc import abstractmethod, ABCMeta
-from .tensor import *
+from tensor import *
 import collections
 
 

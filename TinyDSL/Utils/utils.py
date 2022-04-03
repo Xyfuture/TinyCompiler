@@ -1,6 +1,6 @@
 import torch
 import torch.nn
-from .tensor import *
+from tensor import *
 import math
 
 

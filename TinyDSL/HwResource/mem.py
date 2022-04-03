@@ -1,7 +1,5 @@
-import math
-
 from core import core_allocator
-from .base import *
+from TinyDSL.Utils.base import *
 
 class mem_entry:
     def __init__(self, core_id,addr, size, bitwidth, **kwargs):

@@ -1,5 +1,5 @@
-from ..core import *
-from ..inst import *
+from TinyDSL.HwResource.core import *
+from TinyDSL.HwResource.inst import *
 class RegVar:
     def __init__(self,core_id,**kwargs):
         self.core_id = core_id

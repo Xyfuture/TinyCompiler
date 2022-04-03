@@ -1,8 +1,5 @@
-import torch
-import math
-from .config import *
-from .core import *
-from .utils import *
+from TinyDSL.HwResource.core import *
+from TinyDSL.Utils.utils import *
 
 
 class matrix:

@@ -1,6 +1,3 @@
-import torch
-import numpy
-from core import core_allocator
 from .tensor import *
 from collections import OrderedDict
 
