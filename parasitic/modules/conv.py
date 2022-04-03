@@ -109,10 +109,10 @@ class ConvLayer:
 
 
 
-    def recv_act(self,pre_act_func):
+    def recv_act(self, pre_act):
         for row_list in self.conv_core_array:
             for cur_core in row_list:
-                cur_core.recv_act(pre_act_func)
+                cur_core.recv_act(pre_act)
 
 
 
@@ -129,10 +129,13 @@ class ConvLayer:
     def send_act(self):
         pass
 
-    def forward(self,act_ten):
+    def forward(self,pre_act):
         # 分为三个阶段 首先是接收来自上一层的数据，然后是进行卷积运算，在计算actfunc，最后送到下一层
+        # pre_act 可能是function也可能是普通的TensorVar，只要能被assign接收即可
+        self.recv_act(pre_act)
+        self.compute()
+        return self.send_act()
 
-        pass
 
 
 
@@ -206,8 +209,7 @@ class ConvCore:
 
     def recv_act(self,pre_act_func):
         assert callable(pre_act_func)
-        pre_act_func(self.in_act_ten)
-
+        self.in_act_ten.assign(pre_act_func)
 
     def compute(self,i,j,pre=None):
         '''
@@ -254,8 +256,8 @@ class ConvCore:
 
             # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这首歌偏移
             with vv_set_act_bit:
-                out_i = i/self.stride[0]
-                out_j = j/self.stride[1]
+                out_i = i//self.stride[0]
+                out_j = j//self.stride[1]
 
                 self.out_act_ten.get_vec([out_i,out_j,0],self.columns).assign(shifted_vec)
 
