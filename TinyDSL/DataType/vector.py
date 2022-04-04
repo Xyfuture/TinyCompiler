@@ -1,7 +1,10 @@
+import sys,os
+
 from TinyDSL.DataType.reg import RegVar
 from TinyDSL.HwResource.core import core_allocator
 from TinyDSL.HwResource.inst import instruction
 from TinyDSL.HwResource.mem import mem_entry
+from TinyDSL.DataType.frame import FrameStack
 
 '''
 vector 最重要的区别是存有一个addr_reg和一个length_reg，这使得这个万一直接支持参与指令的运算
@@ -28,6 +31,9 @@ class VectorVar:
         else :
             self.mem = self.core.mem_allocator.get_mem(self.vec_shape*self.bitwidth,self.bitwidth,location=self.location)
             self.mem_owner = True
+
+        if self.mem_owner and self.location == 'stack':
+            FrameStack[self.core_id].insert(id(self),self.mem)
 
 
     def get_addr_reg(self):
@@ -114,8 +120,16 @@ class VectorVar:
 
 
     def __del__(self):
-        pass
+        # 只有在内存是栈内存，且内存属于自己的情况下才会删除
+        try:
+            if self.location == 'stack':
+                if self.mem_owner:
+                    FrameStack[self.core_id].release(id(self))
+        except Exception:
+            import traceback,sys
+            traceback.print_exc()
 
+        # pass
 
 
 class VectorSet:
@@ -136,7 +150,8 @@ class VectorSet:
     def __exit__(self, exc_type, exc_val, exc_tb):
         # self.reset()
         # 不返回true就会正常抛出异常
-        pass
+        # print(exc_type,exc_val,exc_tb)
+        return False # 不在这里面异常，直接把异常抛出去
 
     def set(self):
 

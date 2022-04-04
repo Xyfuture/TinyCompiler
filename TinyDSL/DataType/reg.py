@@ -37,7 +37,13 @@ class RegVar:
 
 
     def __del__(self):
-        self.core.reg_allocator.release_reg(self.reg_id)
+        try:
+            self.core.reg_allocator.release_reg(self.reg_id)
+        except Exception:
+            import traceback,sys
+            traceback.print_exc()
+
+
 
 
     def __add__(self, other):

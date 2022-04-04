@@ -1,9 +1,11 @@
 # import torch
+import copy
+
 from TinyDSL.HwResource.mem import mem_entry
 from TinyDSL.DataType.reg import RegVar
 from TinyDSL.HwResource.core import core_allocator
 from TinyDSL.DataType.vector import VectorVar
-import copy
+from TinyDSL.DataType.frame import FrameStack
 
 # 创建实例必定申请内存
 class TensorVar:
@@ -28,6 +30,10 @@ class TensorVar:
         else:
             self.mem = self.core.mem_allocator.get_mem(self.length*self.bitwidth,self.bitwidth,self.location)
             self.mem_owner = True
+
+        if self.mem_owner and self.location == 'stack':
+            FrameStack[self.core_id].insert(id(self),self.mem)
+
 
         # 对于完全连续的TensorVar设置各类偏移信息
         self.logic_offset = [0 for i in range(self.dim)]
@@ -168,4 +174,10 @@ class TensorVar:
 
 
     def __del__(self):
-        pass
+        try:
+            if self.location == 'stack':
+                if self.mem_owner:
+                    FrameStack[self.core_id].release(id(self))
+        except Exception:
+            import traceback,sys
+            traceback.print_exc()

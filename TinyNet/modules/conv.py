@@ -264,6 +264,8 @@ class ConvCore:
 
                 self.out_act_ten.get_vec([out_i,out_j,0],self.columns).assign(shifted_vec)
 
+
+
         return result_vec
 
     def send_act(self):
