@@ -1,3 +1,4 @@
+from TinyDSL.HwResource.inst import instBuffer
 from TinyDSL.HwResource.mem import mem_entry, Mem_allocator
 from TinyDSL.HwResource.reg import Reg_allocator
 from TinyDSL.HwResource.config import core_config, core_cfg
@@ -7,7 +8,7 @@ class core:
     def __init__(self,core_id,**kwargs):
 
         self.core_id = core_id
-        self.inst_buffer = linkList()
+        self.inst_buffer = instBuffer()
         self.cfg = core_config
         self.meu_cnt = self.cfg.meu_cnt
 

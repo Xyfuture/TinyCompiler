@@ -13,5 +13,5 @@ misc_config = {
 
 cc = conv.ConvCore(conv_config=conv_config,misc_config=misc_config)
 cc.compute(1,1)
-print(cc.core.inst_buffer)
+cc.core.inst_buffer.dump_asm()
 print("in deconstruction")
