@@ -168,7 +168,7 @@ class ConvCore:
 
     def allocate(self):
         # 分配input 和 output feature map 的内存
-        self.in_act_ten = TensorVar(self.in_act_pad_shape,self.core_id,self.act_bitwidth,loaction='heap')
+        self.in_act_ten = TensorVar(self.in_act_pad_shape,self.core_id,self.act_bitwidth,location='heap')
         if self.aggregate:
             self.shift_vec = VectorVar(self.columns,self.core_id,4,location='heap')
             # 这里这个输出tensor应该是已经shift完的，就是原始act-bitwidth
