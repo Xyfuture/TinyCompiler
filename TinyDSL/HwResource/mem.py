@@ -22,7 +22,7 @@ class vmem_entry(mem_entry):
 class Mem_allocator:
     def __init__(self, max_size, core_id):
         self.stack_mem_addr = 0
-        self.heap_mem_addr = 1e8
+        self.heap_mem_addr = int(1e5)
 
         self.stack_entry = []
         self.heap_entry = []

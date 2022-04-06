@@ -41,7 +41,7 @@ class FrameStackCore:
 
 
 
-class frameStack:
+class FrameStack:
     def __init__(self):
         self.frame_core_dict = {}
 
@@ -54,4 +54,4 @@ class frameStack:
 
 
 
-FrameStack = frameStack()
+frame_stack = FrameStack()

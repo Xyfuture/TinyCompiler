@@ -5,7 +5,7 @@ from TinyDSL.HwResource.mem import mem_entry
 from TinyDSL.DataType.reg import RegVar
 from TinyDSL.HwResource.core import core_allocator
 from TinyDSL.DataType.vector import VectorVar
-from TinyDSL.DataType.frame import FrameStack
+from TinyDSL.DataType.frame import frame_stack
 
 # 创建实例必定申请内存
 class TensorVar:
@@ -32,7 +32,7 @@ class TensorVar:
             self.mem_owner = True
 
         if self.mem_owner and self.location == 'stack':
-            FrameStack[self.core_id].insert(id(self),self.mem)
+            frame_stack[self.core_id].insert(id(self), self.mem)
 
 
         # 对于完全连续的TensorVar设置各类偏移信息
@@ -177,7 +177,7 @@ class TensorVar:
         try:
             if self.location == 'stack':
                 if self.mem_owner:
-                    FrameStack[self.core_id].release(id(self))
+                    frame_stack[self.core_id].release(id(self))
         except Exception:
             import traceback,sys
             traceback.print_exc()

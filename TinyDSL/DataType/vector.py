@@ -4,7 +4,7 @@ from TinyDSL.DataType.reg import RegVar
 from TinyDSL.HwResource.core import core_allocator
 from TinyDSL.HwResource.inst import instruction
 from TinyDSL.HwResource.mem import mem_entry
-from TinyDSL.DataType.frame import FrameStack
+from TinyDSL.DataType.frame import frame_stack
 
 '''
 vector 最重要的区别是存有一个addr_reg和一个length_reg，这使得这个万一直接支持参与指令的运算
@@ -33,7 +33,7 @@ class VectorVar:
             self.mem_owner = True
 
         if self.mem_owner and self.location == 'stack':
-            FrameStack[self.core_id].insert(id(self),self.mem)
+            frame_stack[self.core_id].insert(id(self), self.mem)
 
 
     def get_addr_reg(self):
@@ -124,7 +124,7 @@ class VectorVar:
         try:
             if self.location == 'stack':
                 if self.mem_owner:
-                    FrameStack[self.core_id].release(id(self))
+                    frame_stack[self.core_id].release(id(self))
         except Exception:
             import traceback,sys
             traceback.print_exc()
