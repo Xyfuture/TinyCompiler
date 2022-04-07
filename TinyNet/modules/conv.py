@@ -217,7 +217,7 @@ class ConvCore:
         目前还没有设置 vvset的相关信息
         '''
         vv_set_act_bit = VectorSet(self.core_id,self.act_bitwidth,self.columns)
-        vv_set_4bit = VectorSet(self.core_id,4,self.columns) # 向量相加等操作时的bitwidth和length
+        vv_set_4byte = VectorSet(self.core_id,4,self.columns) # 向量相加等操作时的bitwidth和length
 
         window_length = self.kernel_height * self.kernel_width * self.out_channels # 整个卷积窗口的大小
         wc_length = self.kernel_width*self.out_channels # 一个窗口中act连续的大小
@@ -233,7 +233,7 @@ class ConvCore:
         result_vec.assign(0)
         tmp_vec = VectorVar(self.columns,self.core_id,4)
 
-        with vv_set_4bit:
+        with vv_set_4byte:
             for c,cur_mat in enumerate(self.meu_line_list):
                 cur_act_part = act_part[self.meu_line_posi[c]]
                 tmp_vec.assign(cur_mat*cur_act_part)
@@ -245,22 +245,22 @@ class ConvCore:
         # 收集节点操作
         # 加入激活函数的部分，收集节点负责这件事
         if self.aggregate:
-            with vv_set_4bit:
+            with vv_set_4byte:
                 shifted_vec = VectorVar(self.columns,self.core_id,self.act_bitwidth)
                 shifted_vec.assign(result_vec>>self.shift_vec)
 
             # relu函数激活
             with vv_set_act_bit:
-                func = get_act_func(self.activation_func)
-                shifted_vec.assign(func(shifted_vec)) # relu 还没有实现
+                # func = get_act_func(self.activation_func)
+                # shifted_vec.assign(func(shifted_vec)) # relu 还没有实现
+                shifted_vec.assign(shifted_vec.activation_func(self.activation_func))
 
-            # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这首歌偏移
+            # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这个的偏移
             with vv_set_act_bit:
                 out_i = i//self.stride[0]
                 out_j = j//self.stride[1]
 
                 self.out_act_ten.get_vec([out_i,out_j,0],self.columns).assign(shifted_vec)
-
 
 
         return result_vec

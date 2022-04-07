@@ -1,6 +1,7 @@
 from TinyDSL.HwResource.inst import instruction
 
 
+# unused
 class ActivationFunc:
     def __init__(self,act_func):
         self.act_func = act_func

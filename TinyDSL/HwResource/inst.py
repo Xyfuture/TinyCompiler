@@ -16,6 +16,8 @@ class instruction:
     VSIGMOID = 'vsigmoid'
     VTANH = 'vtanh'
     VVGTM = 'vvgtm'
+    VVAND = 'vvand'
+    VVSUB = 'vvsub'
 
     SEND = 'send'
     RECV = 'recv'

@@ -108,29 +108,90 @@ class VectorVar:
             import traceback,sys
             traceback.print_exc()
 
+    #  为了vector-vector指令设计两个用于指令生成的函数
+    def vv_inst_check_set(self,other,inst_op):
+        # 保证在同一个核上进行运算
+        assert self.core_id == other.core_id
+        # 检查是否能够只能vv操作
+        self.check_vvset()
+        other.check_vvset()
+
+        inst = instruction(inst_op,rs1=self.get_addr_reg(),rs2=other.get_addr_reg())
+        return inst
+
+    def vv_inst_set_result(self,inst,result_vec):
+        # 检查核id和vvset
+        assert self.core_id == result_vec.core_id
+        result_vec.check_vvset()
+
+        inst.rd = result_vec.get_addr_reg()
+        self.core.inst_buffer.append(inst)
+
 
     def __add__(self, other):
-        assert self.core_id == other.core_id
+        inst = self.vv_inst_check_set(other,instruction.VVADD)
 
-        inst = instruction(instruction.VVADD,rs1=self.get_addr_reg(),rs2=other.get_addr_reg())
         def gen(result_vec):
-            # check vvest length and bitwidth
-            self.check_vvset()
-            other.check_vvset()
-            result_vec.check_vvset()
+            self.vv_inst_set_result(inst,result_vec)
 
-            inst.rd = result_vec.get_addr_reg()
-            self.core.inst_buffer.append(inst)
         return gen
 
     def __radd__(self, other):
         return self.__add__(other)
 
+    def __sub__(self, other):
+        inst = self.vv_inst_check_set(other,instruction.VVSUB)
+
+        def gen(result_vec):
+            self.vv_inst_set_result(inst,result_vec)
+
+        return gen
+
+    def __rsub__(self, other):
+        return self.__sub__(other)
+
+    def __lshift__(self, other):
+        inst = self.vv_inst_check_set(other,instruction.VVSLL)
+
+        def gen(result_vec):
+            self.vv_inst_set_result(inst,result_vec)
+
+        return gen
+
     def __rshift__(self, other):
-        pass
+        inst = self.vv_inst_check_set(other,instruction.VVSRL)
+
+        def gen(result_vec):
+            self.vv_inst_set_result(inst,result_vec)
+
+        return gen
 
     def __and__(self, other):
-        pass
+        inst =  self.vv_inst_check_set(other,instruction.VVAND)
+
+        def gen(result_vec):
+            self.vv_inst_set_result(inst,result_vec)
+
+        return gen
+
+
+    # 激活函数
+    def activation_func(self,func_name='relu'):
+        self.check_vvset()
+
+        func_op = instruction.VRELU
+        if func_name == 'relu':
+            func_op = instruction.VRELU
+        elif func_name == 'sigmoid':
+            func_op = instruction.VSIGMOID
+        elif func_name == 'tanh':
+            func_op = instruction.VTANH
+
+        inst = instruction(func_op, rs1=self.get_addr_reg())
+        def gen(result_vec):
+            self.vv_inst_check_set(inst,result_vec) # 恰好操作相同，借用一下
+
+        return gen
 
 
 
@@ -140,15 +201,20 @@ class VectorVar:
         assert vec_a.core_id == vec_b.core_id
         vec_a.check_vvset()
         vec_b.check_vvset()
-
+        inst = instruction(instruction.VVGTM, rs1=vec_a.get_addr_reg(),
+                           rs2=vec_b.get_addr_reg())
         core = vec_a.core
         def gen(result_vec):
             assert result_vec.core_id == vec_a.core_id
             result_vec.check_vvset()
 
-            inst = instruction(instruction.VVGTM,rd=result_vec.get_addr_reg(),rs1=vec_a.get_addr_reg(),rs2=vec_b.get_addr_reg())
+            inst.rd = result_vec.get_addr_reg()
             core.inst_buffer.append(inst)
         return gen
+
+
+
+
 
 
 class VectorSet:
