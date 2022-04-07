@@ -28,7 +28,7 @@ class instruction:
     SADD = 'sadd'
     SADDI = 'saddi'
 
-    RD_RS1_RS2 = ['vvadd','vvsub','vvmul','vvgtm','vvgt','vveq','vvand','vvor','vvsll''vvsra','vvdmul','vmv'
+    RD_RS1_RS2 = ['vvadd','vvsub','vvmul','vvgtm','vvgt','vveq','vvand','vvor','vvsll''vvsra','vvdmul','vmv',
                   'sadd','ssub','smul','sdiv',
                   'st','bind','gemv','gvr']
 
@@ -68,7 +68,7 @@ class instruction:
 
         reg_str = ''
         if self.op in self.RD_RS1_RS2:
-            reg_str = ' rd:'+str(self.rd)+' rs1:'+str(self.rs1)+'rs2:'+str(self.rs2)
+            reg_str = ' rd:'+str(self.rd)+' rs1:'+str(self.rs1)+' rs2:'+str(self.rs2)
         elif self.op in self.RD_RS1:
             reg_str = ' rd:' + str(self.rd) + ' rs1:' + str(self.rs1)
         elif self.op in self.RD:
@@ -98,17 +98,26 @@ class instBuffer(linkList):
     def dump_binary(self):
         cur = self.head.next
         while cur is not self.tail:
-            print(cur.value.dump_binary())
+            yield cur.value.dump_binary()
             cur = cur.next
 
     def dump_asm(self):
         cur = self.head.next
         while cur is not self.tail:
-            print(cur.value.dump_asm())
+            yield cur.value.dump_asm()
             cur = cur.next
+
+    def print_asm(self):
+        for _str in self.dump_asm():
+            print(_str)
+
+    def print_binary(self):
+        for _str in self.dump_binary():
+            print(_str)
 
 
 class BinaryInst:
+    # 注意一个问题，高低位反转的问题，我们正常看一个数组是从0到31，首先出现的数是低位，但对于verilog而言是31到0，首先出现的数是高位
     def __init__(self):
         self.inst_array =['0' for _ in range(32)]
 
@@ -123,7 +132,8 @@ class BinaryInst:
             assert start >=0 and stop<=32
             assert stop - start == len(value)
 
-            for i,k in enumerate(value):
+            # 注意这里是反转的
+            for i,k in enumerate(reversed(value)):
                 assert k in ['0','1']
                 self.inst_array[start+i] = k
 
@@ -132,13 +142,15 @@ class BinaryInst:
             return self.inst_array[item]
         elif isinstance(item,slice):
             _str = ''
-            for i in self.inst_array[item]:
+            # 反转一下 有点别扭，slice给的是小到大，但反的数据是大位到小位
+            for i in reversed(self.inst_array[item]):
                 _str += i
             return _str
 
     def dump(self):
         _str = ''
-        for i in self.inst_array:
+        # 反转一下，第一个数是最高位
+        for i in reversed(self.inst_array):
             _str += i
         return _str
 
