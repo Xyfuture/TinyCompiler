@@ -15,6 +15,7 @@ class instruction:
     VRELU = 'vrelu'
     VSIGMOID = 'vsigmoid'
     VTANH = 'vtanh'
+    VVGTM = 'vvgtm'
 
     SEND = 'send'
     RECV = 'recv'

@@ -84,6 +84,7 @@ class TensorVar:
         return VectorVar(length,self.core_id,self.bitwidth,mem=new_mem)
 
     def get_vec_offset(self,offset,length): # 使用一维的绝对偏移获得位置
+        # 这个目前可以无脑写，因为使用的logic offset来寻找开始的地址，但是注意如果给出的length超出了一次连续的长度，那么也是可能会报错的
         def offset_to_indice(offset):
             indice = [0 for i in range(self.dim)]
             for i in range(self.dim):
@@ -131,6 +132,8 @@ class TensorVar:
     def __getitem__(self, item):
         assert len(item) == self.dim
         nlist = []
+
+        # 将单个数也转换为slice。此外支持1: , :3 这样的情况
         for i,s in enumerate(item):
             if isinstance(s,int):
                 s = slice(s,s+1)

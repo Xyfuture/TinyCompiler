@@ -98,6 +98,17 @@ class VectorVar:
             #  for register
             pass
 
+    def __del__(self):
+        # 只有在内存是栈内存，且内存属于自己的情况下才会删除
+        try:
+            if self.location == 'stack':
+                if self.mem_owner:
+                    frame_stack[self.core_id].release(id(self))
+        except Exception:
+            import traceback,sys
+            traceback.print_exc()
+
+
     def __add__(self, other):
         assert self.core_id == other.core_id
 
@@ -118,18 +129,26 @@ class VectorVar:
     def __rshift__(self, other):
         pass
 
+    def __and__(self, other):
+        pass
 
-    def __del__(self):
-        # 只有在内存是栈内存，且内存属于自己的情况下才会删除
-        try:
-            if self.location == 'stack':
-                if self.mem_owner:
-                    frame_stack[self.core_id].release(id(self))
-        except Exception:
-            import traceback,sys
-            traceback.print_exc()
 
-        # pass
+
+
+    @classmethod
+    def gtm(cls, vec_a, vec_b):
+        assert vec_a.core_id == vec_b.core_id
+        vec_a.check_vvset()
+        vec_b.check_vvset()
+
+        core = vec_a.core
+        def gen(result_vec):
+            assert result_vec.core_id == vec_a.core_id
+            result_vec.check_vvset()
+
+            inst = instruction(instruction.VVGTM,rd=result_vec.get_addr_reg(),rs1=vec_a.get_addr_reg(),rs2=vec_b.get_addr_reg())
+            core.inst_buffer.append(inst)
+        return gen
 
 
 class VectorSet:

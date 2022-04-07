@@ -73,9 +73,6 @@ class ConvLayer:
                 row_list.append(tmp_core_mat)
 
 
-
-
-
     def find_core_meu_layout(self):
         def get_core_layout(meu_layout):
             core_mat_rows = self.meu_ele_rows * meu_layout[0]
