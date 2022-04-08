@@ -14,27 +14,34 @@ class FrameStackCore:
 
     def release(self,entry_id):
         assert self.entry_state.get(entry_id)
+        # print('in release:',entry_id)
         self.entry_state[entry_id] = False
         self.cleanup()
 
 
     def insert(self,entry_id,mem):
+        gc.collect()
         self.entry_state[entry_id] = True
         self.entry_mem[entry_id] = mem
+        # print('current:',entry_id)
 
     def cleanup(self):
         gc.collect()
         tmp_gc_list = []
-
+        # print('clearn up')
+        # for k in reversed(self.entry_state):
+        #     print(k,self.entry_state[k])
         for k in reversed(self.entry_state):
             if not self.entry_state[k]:
                 tmp_gc_list.append(k)
             else:
-                for k in tmp_gc_list:
-                    del self.entry_state[k]
-                    self.core.mem_allocator.release_stack_mem(self.entry_mem[k])
-                    del self.entry_mem[k]
-                return
+                break
+        for k in tmp_gc_list:
+            # print('release:',k)
+            del self.entry_state[k]
+            self.core.mem_allocator.release_stack_mem(self.entry_mem[k])
+            del self.entry_mem[k]
+
     def __del__(self):
         for k,v in self.entry_state.items():
             print(k,v)

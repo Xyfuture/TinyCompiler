@@ -1,3 +1,4 @@
+from TinyDSL.DataType.vector import VectorVar
 from TinyNet.modules import conv
 from TinyDSL.HwResource.config import core_config
 
@@ -11,7 +12,9 @@ misc_config = {
     'mat_shape':(288,64),'mat_bitwidth':1,'act_bitwidth':1,'core_config':core_config,'posi':[slice(0,288),slice(0,64)]
 }
 
+
 cc = conv.ConvCore(conv_config=conv_config,misc_config=misc_config)
 cc.compute(1,1)
-cc.core.inst_buffer.dump_binary()
+cc.core.inst_buffer.print_asm()
+tmp = VectorVar(128,0,1)
 print("in deconstruction")
