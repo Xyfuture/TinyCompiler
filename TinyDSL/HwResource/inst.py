@@ -91,9 +91,9 @@ class instruction:
 
 
 
-class instBuffer(linkList):
+class InstBuffer(linkList):
     def __init__(self):
-        super(instBuffer, self).__init__()
+        super(InstBuffer, self).__init__()
 
     def dump_binary(self):
         cur = self.head.next
