@@ -37,9 +37,9 @@ class TensorVar:
 
         # 对于完全连续的TensorVar设置各类偏移信息
         self.logic_offset = [0 for i in range(self.dim)]
-        for i in range(self.dim):
+        for i in range(self.dim-1,-1,-1):
             tmp = 1
-            for j in range(self.dim-i-1,0,-1):
+            for j in range(i+1,self.dim):
                 tmp *= self.ten_shape[j]
             self.logic_offset[i] = tmp
 
@@ -73,7 +73,7 @@ class TensorVar:
         return self.length_reg.reg_id
 
 
-    def get_vec(self,indice,length): # indice 全部是int型即可
+    def get_vec(self,indice,length)->VectorVar: # indice 全部是int型即可
         # 这个length是可能会超长的！！！ 暂时先不检查这个东西了吧，全凭自己操作
         assert len(indice) == self.dim
         vec_mem_offset = self.start_mem_offset # 加入起始的偏移
@@ -83,7 +83,7 @@ class TensorVar:
         new_mem = mem_entry(self.core_id,vec_mem_offset,length*self.bitwidth,self.bitwidth)
         return VectorVar(length,self.core_id,self.bitwidth,mem=new_mem)
 
-    def get_vec_offset(self,offset,length): # 使用一维的绝对偏移获得位置
+    def get_vec_offset(self,offset,length)->VectorVar: # 使用一维的绝对偏移获得位置
         # 这个目前可以无脑写，因为使用的logic offset来寻找开始的地址，但是注意如果给出的length超出了一次连续的长度，那么也是可能会报错的
         def offset_to_indice(offset):
             indice = [0 for i in range(self.dim)]
@@ -138,12 +138,15 @@ class TensorVar:
             if isinstance(s,int):
                 s = slice(s,s+1)
             elif isinstance(s,slice):
-                if not s.start:
-                    s.start = 0
-                if not s.stop:
-                    s.stop = self.ten_shape[i]
+                start =0
+                stop = self.ten_shape[i]
+                if s.start:
+                    start = s.start
+                if s.stop:
+                    stop = s.stop
+                s = slice(start,stop)
             nlist.append(s)
-            assert s.start>=0 and s.stop <=self.ten_shape[i] , "dim not equal"
+            assert s.start>=0 and s.stop <= self.ten_shape[i] , "dim not equal"
 
         item = nlist
 
@@ -154,16 +157,18 @@ class TensorVar:
 
         reverse_item = copy.deepcopy(item)
         reverse_item.reverse()
-        c_dim = 0
+        c_dim = 0 # 连续的维度
         for i,s in enumerate(reverse_item):
             if s.stop-s.start != self.ten_shape[self.dim-i-1]:
-                c_dim = self.dim-i-1
+                c_dim = self.dim-i
+                break
+
         c_length = 1
         for i in range(c_dim,self.dim):
             c_length *= self.ten_shape[i] # 连续的话就和原本的一致了
 
         # 对于原本就分割过的tensor，还需要判断是否超了原先tensor的长度
-        if c_dim > self.continue_dim :
+        if c_dim < self.continue_dim :
             c_dim = self.continue_dim
             c_length = self.continue_length
 

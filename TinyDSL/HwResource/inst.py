@@ -115,6 +115,10 @@ class InstBuffer(linkList):
         for _str in self.dump_binary():
             print(_str)
 
+    def append(self,value,**kwargs):
+        print(value.dump_asm())
+        super(InstBuffer,self).append(value,**kwargs)
+
 
 class BinaryInst:
     # 注意一个问题，高低位反转的问题，我们正常看一个数组是从0到31，首先出现的数是低位，但对于verilog而言是31到0，首先出现的数是高位

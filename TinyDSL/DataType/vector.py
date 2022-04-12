@@ -201,13 +201,14 @@ class VectorVar:
         assert vec_a.core_id == vec_b.core_id
         vec_a.check_vvset()
         vec_b.check_vvset()
-        inst = instruction(instruction.VVGTM, rs1=vec_a.get_addr_reg(),
-                           rs2=vec_b.get_addr_reg())
+
         core = vec_a.core
         def gen(result_vec):
             assert result_vec.core_id == vec_a.core_id
             result_vec.check_vvset()
-
+            # 避免临时变量被gc
+            inst = instruction(instruction.VVGTM, rs1=vec_a.get_addr_reg(),
+                               rs2=vec_b.get_addr_reg())
             inst.rd = result_vec.get_addr_reg()
             core.inst_buffer.append(inst)
         return gen

@@ -48,12 +48,48 @@ class MaxPoolingLayer:
         vvset = VectorSet(self.core_id,self.bitwidth,self.in_channels)
         for h_o,h_i in enumerate(range(0,self.in_height,self.stride)):
             for w_o,w_i in enumerate(range(0,self.in_width,self.stride)):
+                # 限制一下范围，因为直接用stride移动会出现问题
+                if h_i+self.kernel_size>self.in_height or w_i+self.kernel_size > self.in_width:
+                    continue
                 # 首先将第一行复制到out_ten之中
                 self.out_ten[h_o, w_o, :].copy(in_ten[h_i,w_i,:])
+                tmp_result = self.out_ten[h_o, w_o, :].get_vec_offset(0, self.in_channels)
+
                 for posi_offset in range(1,self.kernel_size**2):
                     h_off = posi_offset // self.kernel_size
                     w_off = posi_offset % self.kernel_size
+                    with vvset:
+                        tmp_result.assign(
+                            VectorVar.gtm(tmp_result,
+                            in_ten[h_i + h_off, w_i + w_off, :].get_vec_offset(0, self.in_channels))
+                        )
 
-                    self.out_ten[h_o,w_o,:].assign(VectorVar.gtm(self.out_ten[h_o,w_o,:],in_ten[h_i+h_off,w_i+w_off,:]))
+                        # self.out_ten[h_o,w_o,:].get_vec_offset(0,self.in_channels).assign(
+                        #     VectorVar.gtm(self.out_ten[h_o,w_o,:].get_vec_offset(0,self.in_channels),
+                        #     in_ten[h_i+h_off,w_i+w_off,:].get_vec_offset(0,self.in_channels))
+                        # )
 
 
+
+
+
+
+if __name__ == "__main__":
+    pooling_config = {
+        "kernel_size":3,"stride":2
+    }
+
+    misc_config = {
+        'bitwidth':1
+    }
+
+    input_shape = (28,28,64)
+    output_shape = (13,13,64)
+
+    core_id = core_allocator.get_core()
+    core = core_allocator.access_core(core_id)
+    input_tensor = TensorVar(input_shape,core_id,1)
+
+    pool_layer = MaxPoolingLayer(pooling_config,input_shape,output_shape,misc_config)
+    pool_layer.forward(input_tensor)
+    core.inst_buffer.print_asm()
