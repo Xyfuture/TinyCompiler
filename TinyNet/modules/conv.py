@@ -117,6 +117,7 @@ class ConvLayer:
         # 注意最后的收集节点
         for i in range(0,self.in_act_pad_shape[0]-self.kernel_size[0]+1,self.stride[0]): # 暂时还没有验证这个范围对不对
             for j in range(0,self.in_act_pad_shape[1]-self.kernel_size[1]+1,self.stride[1]):
+                # 这个 i，j的数量应该是对的，不需要修改
                 tmp_vec_list = [None for _ in range(self.core_layout[1])]
                 for cur_conv_core_list in self.conv_core_array:
                     for t,cur_conv_core in enumerate(cur_conv_core_list):
@@ -251,9 +252,9 @@ class ConvCore:
 
             # relu函数激活
             with vv_set_act_bit:
-                # func = get_act_func(self.activation_func)
-                # shifted_vec.assign(func(shifted_vec)) # relu 还没有实现
-                shifted_vec.assign(shifted_vec.activation_func(self.activation_func))
+                # 考虑不需要激活函数的情况
+                if self.activation_func:
+                    shifted_vec.assign(shifted_vec.activation_func(self.activation_func))
 
             # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这个的偏移
             with vv_set_act_bit:
@@ -271,3 +272,7 @@ class ConvCore:
         return self.out_act_ten
 
 
+
+
+if __name__ == "__main__":
+    pass

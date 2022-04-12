@@ -46,11 +46,9 @@ class MaxPoolingLayer:
 
     def compute(self,in_ten:TensorVar):
         vvset = VectorSet(self.core_id,self.bitwidth,self.in_channels)
-        for h_o,h_i in enumerate(range(0,self.in_height,self.stride)):
-            for w_o,w_i in enumerate(range(0,self.in_width,self.stride)):
-                # 限制一下范围，因为直接用stride移动会出现问题
-                if h_i+self.kernel_size>self.in_height or w_i+self.kernel_size > self.in_width:
-                    continue
+        for h_o,h_i in enumerate(range(0,self.in_height-self.kernel_size+1,self.stride)):
+            for w_o,w_i in enumerate(range(0,self.in_width-self.kernel_size+1,self.stride)):
+                # 目前的范围应该啊是对的
                 # 首先将第一行复制到out_ten之中
                 self.out_ten[h_o, w_o, :].copy(in_ten[h_i,w_i,:])
                 tmp_result = self.out_ten[h_o, w_o, :].get_vec_offset(0, self.in_channels)
