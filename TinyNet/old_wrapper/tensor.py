@@ -7,7 +7,7 @@ import math
 
 
 
-# used in conv wrapper to make connection between layers
+# used in conv old_wrapper to make connection between layers
 class vtensor:
     def __init__(self,shape,bitwidth,name='vtensor'):
         self.shape = shape

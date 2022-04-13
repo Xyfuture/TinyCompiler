@@ -1,4 +1,4 @@
-from TinyNet.wrapper.module import *
+from TinyNet.old_wrapper.module import *
 
 class maxPooling(module):
     def __init__(self):

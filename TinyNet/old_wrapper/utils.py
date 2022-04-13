@@ -1,5 +1,5 @@
 import torch
-from TinyNet.wrapper.tensor import vtensor
+from TinyNet.old_wrapper.tensor import vtensor
 
 
 def gen_vtensor(t:torch.Tensor,bitwidth=1,name='vtensor'):

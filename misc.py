@@ -1,4 +1,4 @@
-from TinyNet.wrapper.module import *
+from TinyNet.old_wrapper.module import *
 from TinyDSL.Utils.utils import *
 
 

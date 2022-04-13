@@ -40,7 +40,7 @@ class ConvLayer:
         self.allocate()
 
 
-
+    # 不需要主动进行调用
     def allocate(self):
         # 创建convcore 并分配资源
         self.conv_core_array = [[] for i in range(self.core_layout[0])]
@@ -123,7 +123,7 @@ class ConvLayer:
                     for t,cur_conv_core in enumerate(cur_conv_core_list):
                         tmp_vec = cur_conv_core.compute(i,j,tmp_vec_list[t])
                         tmp_vec_list[t] = tmp_vec
-
+    # todo finish it
     def send_act(self):
         pass
 
@@ -273,6 +273,11 @@ class ConvCore:
 
 
 
+def test_conv_layer():
+    pass
+
+def test_conv_core():
+    pass
 
 if __name__ == "__main__":
     pass
