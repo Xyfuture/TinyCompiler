@@ -129,9 +129,9 @@ class VectorVar:
 
 
     def __add__(self, other):
-        inst = self.vv_inst_check_set(other,instruction.VVADD)
 
         def gen(result_vec):
+            inst = self.vv_inst_check_set(other,instruction.VVADD)
             self.vv_inst_set_result(inst,result_vec)
 
         return gen
@@ -140,9 +140,9 @@ class VectorVar:
         return self.__add__(other)
 
     def __sub__(self, other):
-        inst = self.vv_inst_check_set(other,instruction.VVSUB)
 
         def gen(result_vec):
+            inst = self.vv_inst_check_set(other, instruction.VVSUB)
             self.vv_inst_set_result(inst,result_vec)
 
         return gen
@@ -151,25 +151,25 @@ class VectorVar:
         return self.__sub__(other)
 
     def __lshift__(self, other):
-        inst = self.vv_inst_check_set(other,instruction.VVSLL)
 
         def gen(result_vec):
+            inst = self.vv_inst_check_set(other,instruction.VVSLL)
             self.vv_inst_set_result(inst,result_vec)
 
         return gen
 
     def __rshift__(self, other):
-        inst = self.vv_inst_check_set(other,instruction.VVSRL)
 
         def gen(result_vec):
+            inst = self.vv_inst_check_set(other, instruction.VVSRL)
             self.vv_inst_set_result(inst,result_vec)
 
         return gen
 
     def __and__(self, other):
-        inst =  self.vv_inst_check_set(other,instruction.VVAND)
 
         def gen(result_vec):
+            inst = self.vv_inst_check_set(other, instruction.VVAND)
             self.vv_inst_set_result(inst,result_vec)
 
         return gen
