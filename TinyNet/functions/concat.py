@@ -4,11 +4,14 @@ from TinyDSL.DataType.tensor import TensorVar
 from TinyDSL.DataType.vector import VectorVar
 
 # 针对tensor的，vector基本不需要concat操作
+# 这里的tensor必须都是连续的，否则不能这样copy
 def concat(ten_list:List[TensorVar],c_dim):
     # c_dim 为合并的维度 在这里不是连续的意思
     def check(a,b):
         assert a.dim == b.dim and a.dim == dims
         assert a.bitwidth == b.bitwidth
+        assert not a.sliced and not b.sliced
+
 
         for i in range(dims):
             if i != c_dim:
@@ -17,6 +20,7 @@ def concat(ten_list:List[TensorVar],c_dim):
     sample = ten_list[0]
     dims = sample.dim
     shape = sample.ten_shape
+    c_dim = c_dim -1 #转换为从0开始的维度
 
     outer_cnt = 1 # result_vec 需要进行多少次循环
     for d,i in enumerate(shape):
@@ -39,7 +43,8 @@ def concat(ten_list:List[TensorVar],c_dim):
         check(ten_list[i],ten_list[i+1])
 
     def gen(result_ten:TensorVar):
-        # 通过[]把对应的元素取出来，然后通过copy依次进行赋值
+        assert not result_ten.sliced
+
         for i in range(outer_cnt):
             cur_sum = 0
             for t,l in zip(ten_list,inner_offset_list):

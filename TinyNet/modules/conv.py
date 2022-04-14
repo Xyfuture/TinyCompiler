@@ -5,7 +5,7 @@ from TinyDSL.DataType.vector import VectorVar,VectorSet
 from TinyDSL.Utils.utils import *
 from TinyDSL.HwResource.config import core_config
 from TinyDSL.HwResource.core import core_allocator
-
+from TinyNet.functions.concat import concat
 
 
 class ConvLayer:
@@ -62,6 +62,8 @@ class ConvLayer:
                 tmp_posi = [slice(tmp_posi[i][0],tmp_posi[i][1]) for i in range(2)]
 
                 misc_config['posi']=tmp_posi
+
+                #确定输出的形状
                 misc_config['out_act_shape'] = [self.output_shape[0],self.output_shape[1],tmp_core_mat_shape[1]]
                 # 上面这个是实际的输出保存的形状，core_mat_rows/columns 都是比较理想的情况
                 misc_config['mat_shape'] = tmp_core_mat_shape
@@ -126,7 +128,11 @@ class ConvLayer:
                         tmp_vec_list[t] = tmp_vec
     # todo finish it
     def send_act(self):
-        pass
+        aggregate_list = self.conv_core_array[len(self.conv_core_array)-1]
+        result_list=[]
+        for c in aggregate_list:
+            result_list.append(c.send_act())
+        return concat(result_list,3)
 
     def forward(self,pre_act):
         # 分为三个阶段 首先是接收来自上一层的数据，然后是进行卷积运算，在计算actfunc，最后送到下一层
@@ -136,7 +142,13 @@ class ConvLayer:
         return self.send_act()
 
     def add_up(self,in_act):
-        pass
+        aggregate_list = self.conv_core_array[len(self.conv_core_array)-1]
+        result_list=[]
+        for c in aggregate_list:
+            result_list.append(c.add_up(in_act))
+
+        return concat(result_list,3)
+
 
 # 单个核对应的权重和input
 class ConvCore:
@@ -276,6 +288,22 @@ class ConvCore:
         return self.out_act_ten
 
 
+    # in_ten 可能是个函数
+    def add_up(self,in_ten):
+        assert self.aggregate
+
+        tmp_output_shape = [self.out_act_shape[0],self.out_act_shape[1],self.out_channels]
+        tmp_add_ten = TensorVar(tmp_output_shape,self.core,1)
+        tmp_add_ten.assign(in_ten)
+
+        vv_set = VectorSet(self.core,1,self.columns)
+
+        for i in self.out_act_shape[0]:
+            for j in self.out_act_shape[1]:
+                with vv_set:
+                    tmp_result = self.out_act_ten.get_vec([i,j,0],self.columns)
+                    tmp_result.assign(tmp_add_ten[i,j,self.posi[0]].get_vec_offset(0,self.columns)+tmp_result)
+        return self.out_act_ten
 
 def test_conv_layer():
     pass
