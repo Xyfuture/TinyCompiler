@@ -65,6 +65,7 @@ class ConvLayer:
                 misc_config['out_act_shape'] = [self.output_shape[0],self.output_shape[1],tmp_core_mat_shape[1]]
                 # 上面这个是实际的输出保存的形状，core_mat_rows/columns 都是比较理想的情况
                 misc_config['mat_shape'] = tmp_core_mat_shape
+                misc_config['in_act_shape'] = self.input_shape
 
                 aggregate = False
                 if j == self.core_layout[1]-1:
@@ -134,8 +135,8 @@ class ConvLayer:
         self.compute()
         return self.send_act()
 
-
-
+    def add_up(self,in_act):
+        pass
 
 # 单个核对应的权重和input
 class ConvCore:
@@ -152,7 +153,7 @@ class ConvCore:
         # mat_shape 是真正映射到一个core上矩阵的形状。具体映射到meu上还需要进一步的分割
         # posi 是该core在大矩阵中的相对位置，是一个二元组，第一个表示在行上的起始位置（tuple），第二个是列上的
         # posi 设置为slice的list
-        misc_args = ['in_act_pad_shape','out_act_shape','meu_layout','mat_shape',
+        misc_args = ['in_act_shape','in_act_pad_shape','out_act_shape','meu_layout','mat_shape',
                      'act_bitwidth','mat_bitwidth','core_config','posi']
         for arg in misc_args:
             self.__setattr__(arg,misc_config[arg])
@@ -210,7 +211,10 @@ class ConvCore:
 
     def recv_act(self,pre_act_func):
         assert callable(pre_act_func)
-        self.in_act_ten.assign(pre_act_func)
+        # padding part
+        h_slice = slice(self.padding[0],self.in_act_pad_shape[0]-self.padding[0])
+        w_slice = slice(self.padding[1],self.in_act_pad_shape[1]-self.padding[1])
+        self.in_act_ten[h_slice,w_slice,self.in_channels].assign(pre_act_func)
 
     def compute(self,i,j,pre=None):
         '''

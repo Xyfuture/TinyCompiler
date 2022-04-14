@@ -45,7 +45,7 @@ class TensorVar:
 
         self.mem_offset = [i*self.bitwidth for i in self.logic_offset]
         self.continue_dim = 0 # 在这个及之后的维度都是连续的,这个对应的是数组的标号，有+-1的情况需注意
-        self.continue_length = self.length # 这个是内存连续的长度
+        self.continue_length = self.length # 这个是内存连续的长度,这个可能和continue_dim不是对应的，这个表示的是内存的连续情况
         self.sliced = False
         self.start_mem_offset = 0 # 起始位置相对于self。mem.addr的偏移情况
 
@@ -160,12 +160,12 @@ class TensorVar:
         c_dim = 0 # 连续的维度
         for i,s in enumerate(reverse_item):
             if s.stop-s.start != self.ten_shape[self.dim-i-1]:
-                c_dim = self.dim-i
+                c_dim = self.dim-i-1
                 break
 
         c_length = 1
         for i in range(c_dim,self.dim):
-            c_length *= self.ten_shape[i] # 连续的话就和原本的一致了
+            c_length *= nshape[i] # 连续的话就和原本的一致了
 
         # 对于原本就分割过的tensor，还需要判断是否超了原先tensor的长度
         if c_dim < self.continue_dim :
@@ -189,3 +189,22 @@ class TensorVar:
         except Exception:
             import traceback,sys
             traceback.print_exc()
+
+
+
+def test_slice():
+    core_id = core_allocator.get_core()
+    core = core_allocator.access_core(core_id)
+
+    origin_ten_shape = [28,28,64]
+
+    ten = TensorVar(origin_ten_shape,core_id,1)
+    new_ten = ten[6:21,6:21,:]
+
+    assert new_ten.continue_dim == 1
+    assert new_ten.continue_length == 64*(21-6)
+
+
+
+if __name__ == '__main__':
+    test_slice()

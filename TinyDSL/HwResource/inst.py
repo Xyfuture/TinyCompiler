@@ -116,7 +116,6 @@ class InstBuffer(linkList):
             print(_str)
 
     def append(self,value,**kwargs):
-        print(value.dump_asm())
         super(InstBuffer,self).append(value,**kwargs)
 
 
