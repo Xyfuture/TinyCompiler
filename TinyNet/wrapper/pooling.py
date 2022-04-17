@@ -12,11 +12,14 @@ class MaxPooling(module):
         self.maxpooling_module = nn.MaxPool2d(kernel_size,stride)
 
         self.pooling_args = ['kernel_size','stride']
-        self.pooling_config = {
-            'kernel_size':kernel_size,'stride':stride
-        }
-        self.kernel_size = kernel_size
-        self.stride = stride
+        self.pooling_config = {}
+        # self.kernel_size = kernel_size
+        # self.stride = stride
+        #
+        for arg in self.pooling_args:
+            item = self.maxpooling_module.__getattribute__(arg)
+            self.pooling_config[arg] = item
+            self.__setattr__(arg,item)
 
         self.misc_config ={
             'bitwidth':1
