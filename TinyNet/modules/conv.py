@@ -108,7 +108,6 @@ class ConvLayer:
         self.core_mat_shape = (self.core_mat_rows,self.core_mat_columns)
 
 
-
     def recv_act(self, pre_act):
         for row_list in self.conv_core_array:
             for cur_core in row_list:

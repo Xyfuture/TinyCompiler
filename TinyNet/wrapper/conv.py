@@ -11,7 +11,6 @@ class Conv(module):
     def __init__(self,in_channels, out_channels, kernel_size, stride=1, padding=0, groups=1, bias=True,activation_func='relu'):
         super(Conv, self).__init__()
 
-
         self.conv_module = nn.Conv2d(in_channels, out_channels, kernel_size, stride=stride, padding=padding, groups=groups,
                                      bias=bias)
         self.activation_module = None
@@ -33,8 +32,8 @@ class Conv(module):
         self.conv_config['activation_func'] = self.activation_func
 
         for arg in self.conv_args:
-            item = self.conv_module.__getattribute__(arg)
             if arg != 'activation_func':
+                item = self.conv_module.__getattribute__(arg)
                 self.conv_config[arg] = item
                 self.__setattr__(arg,item)
 
@@ -54,6 +53,9 @@ class Conv(module):
         output_tensor = self.conv_module(input_tensors)
         tmp_out_shape = list(output_tensor.shape)
         self.output_shape = [tmp_out_shape[2],tmp_in_shape[3],tmp_in_shape[1]]
+
+        if self.activation_module:
+            output_tensor = self.activation_module(output_tensor)
 
         return output_tensor
 
