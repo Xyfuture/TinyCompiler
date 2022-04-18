@@ -21,7 +21,7 @@ class MatrixVar:
         def gen(dest_vec):
 
             self.core.inst_buffer.append(instruction(instruction.GEMV,rd=self.get_addr_reg(),rs1=vec.get_addr_reg(),rs2=vec.get_length_reg(),bitwidth=vec.bitwidth))
-            self.core.inst_buffer.append(instruction(instruction.GVR, rd=self.get_addr_reg(), rs1=dest_vec.get_addr_reg(), rs2=self.get_length_reg()))
+            self.core.inst_buffer.append(instruction(instruction.GVR, rd=self.get_addr_reg(), rs1=dest_vec.get_addr_reg(), rs2=self.get_length_reg()),bitwidth=4)
 
         return gen
 

@@ -103,7 +103,7 @@ class VectorVar:
         try:
             if self.location == 'stack':
                 if self.mem_owner:
-                    frame_stack[self.core_id].release(id(self))
+                    frame_stack[self.core_id].release(id(self),self)
         except Exception:
             import traceback,sys
             traceback.print_exc()
@@ -112,6 +112,7 @@ class VectorVar:
     def vv_inst_check_set(self,other,inst_op):
         # 保证在同一个核上进行运算
         assert self.core_id == other.core_id
+
         # 检查是否能够只能vv操作
         self.check_vvset()
         other.check_vvset()
@@ -154,15 +155,25 @@ class VectorVar:
 
         def gen(result_vec):
             inst = self.vv_inst_check_set(other,instruction.VVSLL)
-            self.vv_inst_set_result(inst,result_vec)
 
+            assert self.core_id == result_vec.core_id
+            inst.rd = result_vec.get_addr_reg()
+            inst.bitwidth = result_vec.bitwidth()
+
+            self.core.inst_buffer.append(inst)
         return gen
 
     def __rshift__(self, other):
 
         def gen(result_vec):
             inst = self.vv_inst_check_set(other, instruction.VVSRL)
-            self.vv_inst_set_result(inst,result_vec)
+            # 这里稍微有点却别，因为这个的数据宽度是单独设计的
+            # self.vv_inst_set_result(inst,result_vec)
+            assert self.core_id == result_vec.core_id
+            inst.rd = result_vec.get_addr_reg()
+            inst.bitwidth = result_vec.bitwidth
+
+            self.core.inst_buffer.append(inst)
 
         return gen
 
@@ -189,7 +200,7 @@ class VectorVar:
 
         inst = instruction(func_op, rs1=self.get_addr_reg())
         def gen(result_vec):
-            self.vv_inst_check_set(inst,result_vec) # 恰好操作相同，借用一下
+            self.vv_inst_set_result(inst,result_vec) # 恰好操作相同，借用一下
 
         return gen
 
@@ -262,3 +273,5 @@ class VectorSet:
         inst = instruction(instruction.VVSET,rd=tmp.reg_id,bitwidth=self.bitwidth)
         self.core.inst_buffer.append(inst)
 
+    # def __del__(self):
+    #     print('del')

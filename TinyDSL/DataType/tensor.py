@@ -182,10 +182,11 @@ class TensorVar:
 
 
     def __del__(self):
+        # print('tensor del')
         try:
             if self.location == 'stack':
                 if self.mem_owner:
-                    frame_stack[self.core_id].release(id(self))
+                    frame_stack[self.core_id].release(id(self),self)
         except Exception:
             import traceback,sys
             traceback.print_exc()

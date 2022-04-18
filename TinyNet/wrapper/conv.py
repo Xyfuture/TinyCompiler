@@ -24,15 +24,17 @@ class Conv(module):
 
         self.conv_args = [
             'in_channels', 'out_channels', 'kernel_size', 'stride',
-            'padding', 'group', 'bias', 'activation_func'
+            'padding', 'groups', 'bias', 'activation_func'
         ]
         self.conv_config = {}
 
         self.activation_func = activation_func
         self.conv_config['activation_func'] = self.activation_func
+        self.bias = bias
+        self.conv_config['bias']= self.bias
 
         for arg in self.conv_args:
-            if arg != 'activation_func':
+            if arg not in ['activation_func','bias']:
                 item = self.conv_module.__getattribute__(arg)
                 self.conv_config[arg] = item
                 self.__setattr__(arg,item)

@@ -11,21 +11,35 @@ class FrameStackCore:
 
         self.entry_state = OrderedDict()
         self.entry_mem = OrderedDict()
+        self.resurrection = OrderedDict()
 
-    def release(self,entry_id):
+    def release(self,entry_id,vec_ten):
         assert self.entry_state.get(entry_id)
         # print('in release:',entry_id)
         self.entry_state[entry_id] = False
+        self.resurrection[entry_id] = vec_ten
         self.cleanup()
 
 
+    def checker(self):
+        if len(self.entry_mem)!=len(self.core.mem_allocator.stack_entry):
+            print('not equal')
+        assert len(self.entry_mem) == len(self.core.mem_allocator.stack_entry)
+
+        for i,k in enumerate(self.entry_mem):
+            assert self.entry_mem[k] is self.core.mem_allocator.stack_entry[i]
+
     def insert(self,entry_id,mem):
-        gc.collect()
+        # gc.collect()
+        if entry_id in self.entry_state:
+            print('wrong')
         self.entry_state[entry_id] = True
         self.entry_mem[entry_id] = mem
         # print('current:',entry_id)
+        self.checker()
 
     def cleanup(self):
+        self.checker()
         gc.collect()
         tmp_gc_list = []
         # print('clearn up')
@@ -41,6 +55,7 @@ class FrameStackCore:
             del self.entry_state[k]
             self.core.mem_allocator.release_stack_mem(self.entry_mem[k])
             del self.entry_mem[k]
+            del self.resurrection[k]
 
     def __del__(self):
         for k,v in self.entry_state.items():

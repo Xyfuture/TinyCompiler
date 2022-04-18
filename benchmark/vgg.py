@@ -1,5 +1,10 @@
 from  collections import OrderedDict
 
+import torch
+import torch.nn as nn
+
+from TinyDSL.DataType.tensor import TensorVar
+from TinyDSL.HwResource.core import core_allocator
 from TinyNet.wrapper.conv import Conv
 from TinyNet.wrapper.linear import Linear
 from TinyNet.wrapper.pooling import MaxPooling
@@ -32,10 +37,21 @@ class Vgg8:
     def forward(self,torch_tensor,pim_tensor):
         ret = (torch_tensor,pim_tensor)
 
-        for layer in self.module_list:
+        for cnt,layer in enumerate(self.module_list):
+            print(cnt)
             ret = layer(*ret)
 
+if __name__ == "__main__":
+    net = Vgg8()
 
+    torch_tensor = torch.randn([1,3,32,32])
+    core_id = core_allocator.get_core()
+    core = core_allocator.access_core(core_id)
+
+    pim_tensor = TensorVar([32,32,3],core_id,1)
+
+    net.forward(torch_tensor,pim_tensor)
+    print('here')
 
 
 

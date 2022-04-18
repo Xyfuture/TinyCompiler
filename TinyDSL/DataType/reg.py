@@ -5,11 +5,18 @@ class RegVar:
     def __init__(self,core_id,**kwargs):
         self.core_id = core_id
         self.core = core_allocator.access_core(self.core_id)
-        self.reg_id = self.core.reg_allocator.get_reg()
+        self._reg_id = -1
         if 'imm' in kwargs:
             self.imm_write(kwargs['imm'])
         if 'reg_compute_result' in kwargs:
             self.reg_compute_write(kwargs['reg_compute_result'])
+
+    @property
+    def reg_id(self):
+        if self._reg_id == -1:
+            self._reg_id = self.core.reg_allocator.get_reg()
+        return self._reg_id
+
 
     def imm_write(self,value):
         self.core.inst_buffer.append(instruction(instruction.LDI,rd=self.reg_id,imm=value))
@@ -38,7 +45,8 @@ class RegVar:
 
     def __del__(self):
         try:
-            self.core.reg_allocator.release_reg(self.reg_id)
+            if self._reg_id !=-1 :
+                self.core.reg_allocator.release_reg(self.reg_id)
         except Exception:
             import traceback,sys
             traceback.print_exc()

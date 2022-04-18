@@ -24,9 +24,12 @@ class Linear(module):
 
         self.linear_config = {}
         self.linear_config['activation_func'] = self.activation_func
+        self.bias = bias
+        self.linear_config['bias'] = bias
+
 
         for arg in self.linear_args:
-            if arg != 'activation_func':
+            if arg not in ['activation_func','bias']:
                 item = self.linear_module.__getattribute__(arg)
                 self.linear_config[arg] = item
                 self.__setattr__(arg,item)
@@ -68,7 +71,7 @@ class Linear(module):
     def pim_forward(self,in_ten):
         self.allocate()
         out_ten = self.linear_layer.forward(in_ten) # in_ten 可能是个function
-        # out_ten 同理，可能是tensor，也可能是function 
+        # out_ten 同理，可能是tensor，也可能是function
         return out_ten
 
     def allocate(self):

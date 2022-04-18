@@ -1,3 +1,5 @@
+import gc,sys
+
 from TinyNet.functions.act_func import get_act_func
 from TinyDSL.DataType.tensor import TensorVar
 from TinyDSL.DataType.matrix import MatrixVar
@@ -10,8 +12,12 @@ from TinyNet.functions.concat import concat
 
 class ConvLayer:
     def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
+        self.conv_config = conv_config
+        self.misc_config = misc_config
+
+
         conv_args = ['in_channels', 'out_channels', 'kernel_size', 'stride',
-                     'padding', 'group', 'bias', 'activation_func']
+                     'padding', 'groups', 'bias', 'activation_func']
         self.conv_args = conv_args
         for arg in conv_args:
             self.__setattr__(arg, conv_config[arg])
@@ -25,7 +31,7 @@ class ConvLayer:
         self.output_shape = output_shape
         assert len(self.input_shape)==3 , "HWC not NHWC"
 
-        self.in_act_pad_shape = [self.input_shape[i]+self.padding[i] for i in range(2)]+[self.input_shape[2]]
+        self.in_act_pad_shape = [self.input_shape[i]+2*self.padding[i] for i in range(2)]+[self.input_shape[2]]
         self.out_act_shape = self.output_shape
 
         self.core_config = core_config
@@ -125,7 +131,12 @@ class ConvLayer:
                     for t,cur_conv_core in enumerate(cur_conv_core_list):
                         tmp_vec = cur_conv_core.compute(i,j,tmp_vec_list[t])
                         tmp_vec_list[t] = tmp_vec
-    # todo finish it
+                        # print(sys.getrefcount(tmp_vec))
+                        # print('---------')
+                        # del tmp_vec_list[t]
+                        # tmp_vec_list.append(tmp_vec)
+        print('finish')
+
     def send_act(self):
         aggregate_list = self.conv_core_array[len(self.conv_core_array)-1]
         result_list=[]
@@ -153,7 +164,7 @@ class ConvLayer:
 class ConvCore:
     def __init__(self,conv_config:dict,misc_config:dict,aggregate=False):
         conv_args = ['in_channels','out_channels','kernel_size','stride',
-                     'padding','group','bias','activation_func']
+                     'padding','groups','bias','activation_func']
         for arg in conv_args:
             self.__setattr__(arg,conv_config[arg])
 
@@ -177,6 +188,7 @@ class ConvCore:
         self.allocate()
 
     def allocate(self):
+        self.rows, self.columns = self.mat_shape
         # 分配input 和 output feature map 的内存
         self.in_act_ten = TensorVar(self.in_act_pad_shape,self.core_id,self.act_bitwidth,location='heap')
         if self.aggregate:
@@ -185,9 +197,6 @@ class ConvCore:
             self.out_act_ten = TensorVar(self.out_act_shape,self.core_id,self.act_bitwidth,location='heap')
 
         # 分配weight matrix 对应的meu
-
-        self.rows,self.columns = self.mat_shape
-
         self.meu_ele_rows = self.core_config.meu_rows
         self.meu_ele_columns = (self.core_config.meu_columns * self.core_config.meu_cell_bit)//(self.mat_bitwidth*8)
 
@@ -218,14 +227,17 @@ class ConvCore:
             self.meu_line_list.append(tmp_mat)
             self.meu_line_posi.append(tmp_posi)
 
+        self.result_vec = VectorVar(self.columns,self.core_id,4)
+        self.pre_vec = VectorVar(self.columns,self.core_id,4)
+
         # 这里还没有考虑量化，bias，act function的资源资源分配
 
     def recv_act(self,pre_act_func):
-        assert callable(pre_act_func)
+        # assert callable(pre_act_func)
         # padding part
         h_slice = slice(self.padding[0],self.in_act_pad_shape[0]-self.padding[0])
         w_slice = slice(self.padding[1],self.in_act_pad_shape[1]-self.padding[1])
-        self.in_act_ten[h_slice,w_slice,self.in_channels].assign(pre_act_func)
+        self.in_act_ten[h_slice,w_slice,:].assign(pre_act_func)
 
     def compute(self,i,j,pre=None):
         '''
@@ -245,25 +257,26 @@ class ConvCore:
                 im2col_vec[c * wc_length:(c + 1) * wc_length].copy(self.in_act_ten.get_vec([i+c,j,0],wc_length))
         act_part = im2col_vec[self.posi[0]] # 节选出当前core需要的一个窗口中的部分
 
-        result_vec = VectorVar(self.columns,self.core_id,4) # 计算得到的最终结果
-        result_vec.assign(0)
+        # self.result_vec = VectorVar(self.columns,self.core_id,4) # 计算得到的最终结果
+        # result_vec.assign(0)
         tmp_vec = VectorVar(self.columns,self.core_id,4)
 
         with vv_set_4byte:
             for c,cur_mat in enumerate(self.meu_line_list):
                 cur_act_part = act_part[self.meu_line_posi[c]]
                 tmp_vec.assign(cur_mat*cur_act_part)
-                result_vec.assign(result_vec+tmp_vec)
+                self.result_vec.assign(self.result_vec+tmp_vec)
             # 与之前的结果相加
             if pre:
-                result_vec.assign(result_vec+pre)
+                self.pre_vec.assign(pre)
+                self.result_vec.assign(self.result_vec+self.pre_vec)
 
         # 收集节点操作
         # 加入激活函数的部分，收集节点负责这件事
         if self.aggregate:
             with vv_set_4byte:
                 shifted_vec = VectorVar(self.columns,self.core_id,self.act_bitwidth)
-                shifted_vec.assign(result_vec>>self.shift_vec)
+                shifted_vec.assign(self.result_vec>>self.shift_vec)
 
             # relu函数激活
             with vv_set_act_bit:
@@ -279,7 +292,7 @@ class ConvCore:
                 self.out_act_ten.get_vec([out_i,out_j,0],self.columns).assign(shifted_vec)
 
 
-        return result_vec
+        return self.result_vec
 
     def send_act(self):
         assert self.aggregate

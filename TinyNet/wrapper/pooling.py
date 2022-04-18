@@ -33,7 +33,7 @@ class MaxPooling(module):
 
 
     def torch_forward(self, input_tensors):
-        tmp_in_shape = list(input_tensors)
+        tmp_in_shape = list(input_tensors.shape)
 
         self.input_shape = [tmp_in_shape[2],tmp_in_shape[3],tmp_in_shape[1]]
 

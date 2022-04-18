@@ -1,4 +1,5 @@
 # from core import core_allocator
+import gc
 
 class mem_entry:
     def __init__(self, core_id,addr, size, bitwidth, **kwargs):
@@ -52,6 +53,7 @@ class Mem_allocator:
         return entry
 
     def get_stack_mem(self, size, bitwidth, **kwargs):
+        gc.collect()
         kwargs['location'] = 'stack'
         entry = mem_entry(self.core_id,self.stack_mem_addr, size, bitwidth, **kwargs)
 
