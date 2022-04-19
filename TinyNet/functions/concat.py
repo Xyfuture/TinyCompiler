@@ -43,7 +43,7 @@ def concat(ten_list:List[TensorVar],c_dim):
         check(ten_list[i],ten_list[i+1])
 
     def gen(result_ten:TensorVar):
-        assert not result_ten.sliced
+        # assert not result_ten.sliced
 
         for i in range(outer_cnt):
             cur_sum = 0
