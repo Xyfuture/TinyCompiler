@@ -38,7 +38,7 @@ class MaxPooling(module):
         self.input_shape = [tmp_in_shape[2],tmp_in_shape[3],tmp_in_shape[1]]
 
         output_tensor = self.maxpooling_module(input_tensors)
-        tmp_out_shape = list(output_tensor)
+        tmp_out_shape = list(output_tensor.shape)
 
         self.output_shape = [tmp_out_shape[2],tmp_out_shape[3],tmp_in_shape[1]]
 
