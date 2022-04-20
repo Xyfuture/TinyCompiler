@@ -30,7 +30,7 @@ class core:
 
 class Core_allocator:
     def __init__(self,cfg_core:core_cfg):
-        self.core_cnt = 64
+        self.core_cnt = 1024
 
         self.cfg = cfg_core
         self.core_list = [core(i) for i in range(self.core_cnt)]

@@ -18,7 +18,7 @@ class LinearLayer(ConvLayer):
         conv_config = {
             'in_channels':input_shape[2],'out_channels':self.out_features,'kernel_size':input_shape[0:2],
             'stride':(1,1),'padding':(0,0),'groups':1,'bias':linear_config['bias'],
-            'activation_function':linear_config['activation_function']
+            'activation_func':linear_config['activation_func']
         }
 
         # input_shape = (1,1,self.in_features)

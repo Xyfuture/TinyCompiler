@@ -40,7 +40,7 @@ class FrameStackCore:
 
     def cleanup(self):
         self.checker()
-        gc.collect()
+        # gc.collect()
         tmp_gc_list = []
         # print('clearn up')
         # for k in reversed(self.entry_state):

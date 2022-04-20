@@ -76,7 +76,7 @@ class ConvLayer:
                 misc_config['in_act_shape'] = self.input_shape
 
                 aggregate = False
-                if j == self.core_layout[1]-1:
+                if i == self.core_layout[0]-1:
                     aggregate = True
                 tmp_core_mat = ConvCore(self.conv_config,misc_config,aggregate)
                 row_list.append(tmp_core_mat)
@@ -135,7 +135,7 @@ class ConvLayer:
                         # print('---------')
                         # del tmp_vec_list[t]
                         # tmp_vec_list.append(tmp_vec)
-        print('finish')
+        # print('finish')
 
     def send_act(self):
         aggregate_list = self.conv_core_array[len(self.conv_core_array)-1]
@@ -247,8 +247,8 @@ class ConvCore:
         vv_set_act_bit = VectorSet(self.core_id,self.act_bitwidth,self.columns)
         vv_set_4byte = VectorSet(self.core_id,4,self.columns) # 向量相加等操作时的bitwidth和length
 
-        window_length = self.kernel_height * self.kernel_width * self.out_channels # 整个卷积窗口的大小
-        wc_length = self.kernel_width*self.out_channels # 一个窗口中act连续的大小
+        window_length = self.kernel_height * self.kernel_width * self.in_channels # 整个卷积窗口的大小
+        wc_length = self.kernel_width*self.in_channels # 一个窗口中act连续的大小
 
         im2col_vec = VectorVar(window_length,self.core_id,self.act_bitwidth)
 

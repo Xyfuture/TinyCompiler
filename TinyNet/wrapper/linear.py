@@ -47,7 +47,7 @@ class Linear(module):
         tmp_in_shape = list(input_tensors.shape)
 
         if len(tmp_in_shape) == 4: # CONV output
-            input_tensors.view(-1,self.in_features)
+            input_tensors = input_tensors.view(-1,self.in_features)
             self.input_shape = [tmp_in_shape[2],tmp_in_shape[3],tmp_in_shape[1]]
         elif len(tmp_in_shape) == 2:
             self.input_shape = [1,1,self.in_features]
