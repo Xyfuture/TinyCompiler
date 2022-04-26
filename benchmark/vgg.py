@@ -27,6 +27,8 @@ class Vgg8:
         self.linear = Linear(in_features=1024,out_features=10)
 
         self.module_list = [
+            # self.conv1
+
             self.conv1,self.conv2,self.max_pool1,
             self.conv3,self.conv4,self.max_pool2,
             self.conv5,self.conv6,self.max_pool3,
@@ -51,6 +53,9 @@ if __name__ == "__main__":
     pim_tensor = TensorVar([32,32,3],core_id,1)
 
     net.forward(torch_tensor,pim_tensor)
+
+    core = core_allocator.access_core(50)
+    core.inst_buffer.print_asm()
     print('here')
 
 

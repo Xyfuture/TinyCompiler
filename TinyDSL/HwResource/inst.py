@@ -44,7 +44,7 @@ class instruction:
 
     BITWIDTH = ['vvset','vvsll','vvsra','bind','gemv']
 
-    def __init__(self,op=None,**kwargs):
+    def __init__(self,op='none',**kwargs):
         self.op = op
         default_value = {'rd':0,'rs1':0,'rs2':0,'bitwidth':0,'imm':0}
         for k,v in default_value.items():
@@ -87,8 +87,13 @@ class instruction:
         _str += reg_str+imm_str+bitwidth_str
         return _str
 
+    def dump_dict(self):
+        default_value = {'op':'none' ,'rd':0,'rs1':0,'rs2':0,'bitwidth':0,'imm':0}
 
-
+        for k in default_value:
+            if k in self.__dict__:
+                default_value[k] = self.__dict__[k]
+        return default_value
 
 
 class InstBuffer(linkList):
@@ -106,6 +111,17 @@ class InstBuffer(linkList):
         while cur is not self.tail:
             yield cur.value.dump_asm()
             cur = cur.next
+
+    def dump_dict(self):
+        cur = self.head.next
+        while cur is not self.tail:
+            yield cur.value.dump_dict()
+            cur = cur.next
+
+    def print_dict(self):
+        for _str in self.dump_dict():
+            print(_str)
+
 
     def print_asm(self):
         for _str in self.dump_asm():
