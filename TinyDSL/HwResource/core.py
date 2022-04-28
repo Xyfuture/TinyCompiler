@@ -21,7 +21,7 @@ class core:
     def get_meu(self,cnt=1):
         meu_id_list = self.meu_state.get_free(cnt)
         if cnt == 1:
-            return self.meu_list[meu_id_list]
+            return [self.meu_list[meu_id_list]]
         else:
             tmp_meu_list = [self.meu_list[i] for i in meu_id_list]
             return tmp_meu_list

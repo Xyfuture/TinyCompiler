@@ -16,6 +16,10 @@ class MatrixVar:
         self.addr_reg = RegVar(core_id,imm=self.packet_id)
         self.length_reg = RegVar(core_id,imm=self.columns)
 
+        #插入bind指令
+
+        bind_inst = instruction('bind',rd=self.get_addr_reg(),rs1=0,rs2=0,imm=len(meu_list),bitwidth=self.bitwidth)
+        self.core.inst_buffer.append(bind_inst)
 
     def __mul__(self, vec):
         def gen(dest_vec):

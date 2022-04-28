@@ -1,5 +1,5 @@
 import copy
-
+import pickle
 from TinyDSL.HwResource.isa import FUNCT5_MAP, FUNCT_LIST_MAP,OPCODE_MAP
 from TinyDSL.Utils.base import linkList
 
@@ -133,6 +133,11 @@ class InstBuffer(linkList):
 
     def append(self,value,**kwargs):
         super(InstBuffer,self).append(value,**kwargs)
+
+    def save_dict(self,path='./tmp.pkl'):
+        inst_list = self.dump_dict()
+        with open(path,'wb') as f:
+            pickle.dump(inst_list,f)
 
 
 class BinaryInst:
