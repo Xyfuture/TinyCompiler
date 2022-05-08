@@ -30,7 +30,7 @@ class core:
 
 class Core_allocator:
     def __init__(self,cfg_core:core_cfg):
-        self.core_cnt = 1024
+        self.core_cnt = 64
 
         self.cfg = cfg_core
         self.core_list = [core(i) for i in range(self.core_cnt)]
@@ -52,6 +52,11 @@ class Core_allocator:
 
     def __getitem__(self, item):
         return self.core_list[item]
+
+    def allocated_cores(self):
+        for i in range(self.core_cnt):
+            if self.core_allocate_state.query(i) == 'allocated':
+                yield self.core_list[i]
 
 class meu:
     '''

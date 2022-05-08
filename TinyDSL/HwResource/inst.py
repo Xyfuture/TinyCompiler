@@ -28,7 +28,7 @@ class instruction:
     SADD = 'sadd'
     SADDI = 'saddi'
 
-    RD_RS1_RS2 = ['vvadd','vvsub','vvmul','vvgtm','vvgt','vveq','vvand','vvor','vvsll''vvsra','vvdmul','vmv',
+    RD_RS1_RS2 = ['vvadd','vvsub','vvmul','vvgtm','vvgt','vveq','vvand','vvor','vvsrl','vvsra','vvdmul','vmv',
                   'sadd','ssub','smul','sdiv',
                   'st','bind','gemv','gvr']
 
@@ -96,27 +96,21 @@ class instruction:
         return default_value
 
 
-class InstBuffer(linkList):
+class InstBuffer():
     def __init__(self):
-        super(InstBuffer, self).__init__()
+        self.inst_list = []
 
     def dump_binary(self):
-        cur = self.head.next
-        while cur is not self.tail:
-            yield cur.value.dump_binary()
-            cur = cur.next
+        for i in self.inst_list:
+            yield i.dump_binary()
 
     def dump_asm(self):
-        cur = self.head.next
-        while cur is not self.tail:
-            yield cur.value.dump_asm()
-            cur = cur.next
+        for i in self.inst_list:
+            yield i.dump_asm()
 
     def dump_dict(self):
-        cur = self.head.next
-        while cur is not self.tail:
-            yield cur.value.dump_dict()
-            cur = cur.next
+        for i in self.inst_list:
+            yield i.dump_dict()
 
     def print_dict(self):
         for _str in self.dump_dict():
@@ -132,12 +126,57 @@ class InstBuffer(linkList):
             print(_str)
 
     def append(self,value,**kwargs):
-        super(InstBuffer,self).append(value,**kwargs)
+        self.inst_list.append(value)
 
     def save_dict(self,path='./tmp.pkl'):
-        inst_list = self.dump_dict()
+        inst_list =[i for i in self.dump_dict()]
         with open(path,'wb') as f:
             pickle.dump(inst_list,f)
+
+
+
+# class InstBuffer(linkList):
+#     def __init__(self):
+#         super(InstBuffer, self).__init__()
+#
+#     def dump_binary(self):
+#         cur = self.head.next
+#         while cur is not self.tail:
+#             yield cur.value.dump_binary()
+#             cur = cur.next
+#
+#     def dump_asm(self):
+#         cur = self.head.next
+#         while cur is not self.tail:
+#             yield cur.value.dump_asm()
+#             cur = cur.next
+#
+#     def dump_dict(self):
+#         cur = self.head.next
+#         while cur is not self.tail:
+#             yield cur.value.dump_dict()
+#             cur = cur.next
+#
+#     def print_dict(self):
+#         for _str in self.dump_dict():
+#             print(_str)
+#
+#
+#     def print_asm(self):
+#         for _str in self.dump_asm():
+#             print(_str)
+#
+#     def print_binary(self):
+#         for _str in self.dump_binary():
+#             print(_str)
+#
+#     def append(self,value,**kwargs):
+#         super(InstBuffer,self).append(value,**kwargs)
+#
+#     def save_dict(self,path='./tmp.pkl'):
+#         inst_list = self.dump_dict()
+#         with open(path,'wb') as f:
+#             pickle.dump(inst_list,f)
 
 
 class BinaryInst:

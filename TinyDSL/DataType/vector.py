@@ -21,6 +21,10 @@ class VectorVar:
         self.core = core_allocator.access_core(self.core_id)
         self.bitwidth = bitwidth
 
+        if self.vec_shape < 0:
+            print('here')
+
+
         self.location = 'stack'
         if 'location' in kwargs:
             self.location = kwargs['location']

@@ -32,7 +32,7 @@ class Vgg8:
             self.conv1,self.conv2,self.max_pool1,
             self.conv3,self.conv4,self.max_pool2,
             self.conv5,self.conv6,self.max_pool3,
-            self.conv7,self.max_pool3,self.linear
+            self.conv7,self.max_pool4,self.linear
         ]
 
 
@@ -54,9 +54,11 @@ if __name__ == "__main__":
 
     net.forward(torch_tensor,pim_tensor)
 
-    core = core_allocator.access_core(50)
-    core.inst_buffer.print_asm()
-    print('here')
+    for i,c in enumerate(core_allocator.allocated_cores()):
+        print('{}:{}'.format(i,len(c.inst_buffer.inst_list)))
+
+    # core = core_allocator.access_core(50)
+    # core.inst_buffer.print_asm()
 
 
 

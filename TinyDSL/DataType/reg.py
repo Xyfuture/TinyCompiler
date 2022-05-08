@@ -7,6 +7,8 @@ class RegVar:
         self.core = core_allocator.access_core(self.core_id)
         self._reg_id = -1
         if 'imm' in kwargs:
+            if kwargs['imm'] < 0:
+                print('here')
             self.imm_write(kwargs['imm'])
         if 'reg_compute_result' in kwargs:
             self.reg_compute_write(kwargs['reg_compute_result'])

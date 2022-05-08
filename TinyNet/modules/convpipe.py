@@ -7,7 +7,7 @@ from TinyDSL.HwResource.core import core_allocator
 from TinyNet.functions.concat import concat
 
 
-class ConvLayer:
+class ConvPipeLayer:
     def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
         self.conv_config = conv_config
         self.misc_config = misc_config
@@ -75,7 +75,7 @@ class ConvLayer:
                 aggregate = False
                 if i == self.core_layout[0]-1:
                     aggregate = True
-                tmp_core_mat = ConvCore(self.conv_config,misc_config,aggregate)
+                tmp_core_mat = ConvPipeCore(self.conv_config, misc_config, aggregate)
                 row_list.append(tmp_core_mat)
 
 
@@ -120,19 +120,39 @@ class ConvLayer:
 
     def compute(self):
         # 注意最后的收集节点
+        pre_posi = (-1,-1)
+        cur_posi = (-1,-1)
+        next_posi = (0,0)
+
+        for cur_conv_core_list in self.conv_core_array:
+            for t, cur_conv_core in enumerate(cur_conv_core_list):
+                cur_conv_core.compute(pre_posi,cur_posi,next_posi,[None for _ in range(self.core_layout[1])])
+
+        tmp_vec_list = [None for _ in range(self.core_layout[1])]
         for i in range(0,self.in_act_pad_shape[0]-self.kernel_size[0]+1,self.stride[0]): # 暂时还没有验证这个范围对不对
             for j in range(0,self.in_act_pad_shape[1]-self.kernel_size[1]+1,self.stride[1]):
                 # 这个 i，j的数量应该是对的，不需要修改
                 tmp_vec_list = [None for _ in range(self.core_layout[1])]
+
                 for cur_conv_core_list in self.conv_core_array:
                     for t,cur_conv_core in enumerate(cur_conv_core_list):
-                        tmp_vec = cur_conv_core.compute(i,j,tmp_vec_list[t])
+
+                        cur_posi = (i,j)
+                        if j+self.stride[1] < self.in_act_pad_shape[1]-self.kernel_size[1]+1:
+                            next_posi = (i,j+self.stride[1])
+                        elif i+self.stride[0] < self.in_act_pad_shape[0]-self.kernel_size[0]+1:
+                            next_posi = (i+self.stride[0],0)
+                        else:
+                            next_posi = (-1,-1)
+
+                        tmp_vec = cur_conv_core.compute(pre_posi,cur_posi,next_posi,tmp_vec_list[t])
                         tmp_vec_list[t] = tmp_vec
-                        # print(sys.getrefcount(tmp_vec))
-                        # print('---------')
-                        # del tmp_vec_list[t]
-                        # tmp_vec_list.append(tmp_vec)
-        # print('finish')
+
+                        pre_posi = cur_posi
+
+        for cur_conv_core_list in self.conv_core_array:
+            for t, cur_conv_core in enumerate(cur_conv_core_list):
+                cur_conv_core.compute(pre_posi,(-1,-1),(-1,-1),tmp_vec_list)
 
     def send_act(self):
         aggregate_list = self.conv_core_array[len(self.conv_core_array)-1]
@@ -158,7 +178,7 @@ class ConvLayer:
 
 
 # 单个核对应的权重和input
-class ConvCore:
+class ConvPipeCore:
     def __init__(self,conv_config:dict,misc_config:dict,aggregate=False):
         conv_args = ['in_channels','out_channels','kernel_size','stride',
                      'padding','groups','bias','activation_func']
@@ -226,6 +246,11 @@ class ConvCore:
             self.meu_line_list.append(tmp_mat)
             self.meu_line_posi.append(tmp_posi)
 
+
+
+        window_length = self.kernel_height * self.kernel_width * self.in_channels
+        self.im2col_vec = VectorVar(window_length,self.core_id,self.act_bitwidth)
+        self.tmp_result_vec = VectorVar(self.columns,self.core_id,4)
         self.result_vec = VectorVar(self.columns,self.core_id,4)
         self.pre_vec = VectorVar(self.columns,self.core_id,4)
 
@@ -238,62 +263,79 @@ class ConvCore:
         w_slice = slice(self.padding[1],self.in_act_pad_shape[1]-self.padding[1])
         self.in_act_ten[h_slice,w_slice,:].assign(pre_act_func)
 
-    def compute(self,i,j,pre=None):
+    def compute(self, pre_posi,cur_posi, next_posi, pre_vec=None):
         '''
         计算一个卷积窗口的情况，pre是上一部分送来的结果
         目前还没有设置 vvset的相关信息
+        pre_posi 上一个后续处理
+        cur_posi 本次处理
+        next_posi 下一条准备
         '''
+
+        def cur_computation():
+            act_part = self.im2col_vec[self.posi[0]]  # 节选出当前core需要的一个窗口中的部分
+
+            for c, cur_mat in enumerate(self.meu_line_list):
+                cur_act_part = act_part[self.meu_line_posi[c]]
+                self.tmp_result_vec.assign(cur_mat * cur_act_part)
+
+        def pre_computatiom():
+            with vv_set_4byte:
+                self.result_vec.assign(0)
+                for c,cur_mat in enumerate(self.meu_line_list):
+                    cur_mat.get_gvr(self.tmp_result_vec)
+                    self.result_vec.assign(self.result_vec+self.tmp_result_vec)
+                # 与之前的结果相加
+                if pre_vec:
+                    self.pre_vec.assign(pre_vec)
+                    self.result_vec.assign(self.result_vec+self.pre_vec)
+
+            if self.aggregate:
+                with vv_set_4byte:
+                    shifted_vec = VectorVar(self.columns, self.core_id, self.act_bitwidth)
+                    shifted_vec.assign(self.result_vec >> self.shift_vec)
+
+                # relu函数激活
+                with vv_set_act_bit:
+                    # 考虑不需要激活函数的情况
+                    if self.activation_func:
+                        shifted_vec.assign(shifted_vec.activation_func(self.activation_func))
+
+                # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这个的偏移
+                with vv_set_act_bit:
+                    out_i = pre_posi[0] // self.stride[0]
+                    out_j = pre_posi[1] // self.stride[1]
+
+                    self.out_act_ten.get_vec([out_i, out_j, 0], self.columns).assign(shifted_vec)
+
+
+        def next_computation():
+            # with vv_set_act_bit:
+            for c in range(self.kernel_height):
+                self.im2col_vec[c * wc_length:(c + 1) * wc_length].copy(
+                    self.in_act_ten.get_vec([next_posi[0]+c, next_posi[1], 0], wc_length))
+
+
+
         vv_set_act_bit = VectorSet(self.core_id,self.act_bitwidth,self.columns)
         vv_set_4byte = VectorSet(self.core_id,4,self.columns) # 向量相加等操作时的bitwidth和length
 
-        window_length = self.kernel_height * self.kernel_width * self.in_channels # 整个卷积窗口的大小
         wc_length = self.kernel_width*self.in_channels # 一个窗口中act连续的大小
 
-        im2col_vec = VectorVar(window_length,self.core_id,self.act_bitwidth)
 
-        with vv_set_act_bit:
-            for c in range(self.kernel_height):
-                im2col_vec[c * wc_length:(c + 1) * wc_length].copy(self.in_act_ten.get_vec([i+c,j,0],wc_length))
-        act_part = im2col_vec[self.posi[0]] # 节选出当前core需要的一个窗口中的部分
 
-        # self.result_vec = VectorVar(self.columns,self.core_id,4) # 计算得到的最终结果
-        # result_vec.assign(0)
-        tmp_vec = VectorVar(self.columns,self.core_id,4)
+        if cur_posi[0]>=0 and cur_posi[1]>= 0:
+            cur_computation()
 
-        self.result_vec.assign(0)
+        if pre_posi[0] >= 0 and pre_posi[1] >= 0:
+            pre_computatiom()
 
-        with vv_set_4byte:
-            for c,cur_mat in enumerate(self.meu_line_list):
-                cur_act_part = act_part[self.meu_line_posi[c]]
-                tmp_vec.assign(cur_mat*cur_act_part)
-                self.result_vec.assign(self.result_vec+tmp_vec)
-            # 与之前的结果相加
-            if pre:
-                self.pre_vec.assign(pre)
-                self.result_vec.assign(self.result_vec+self.pre_vec)
-
-        # 收集节点操作
-        # 加入激活函数的部分，收集节点负责这件事
-        if self.aggregate:
-            with vv_set_4byte:
-                shifted_vec = VectorVar(self.columns,self.core_id,self.act_bitwidth)
-                shifted_vec.assign(self.result_vec>>self.shift_vec)
-
-            # relu函数激活
-            with vv_set_act_bit:
-                # 考虑不需要激活函数的情况
-                if self.activation_func:
-                    shifted_vec.assign(shifted_vec.activation_func(self.activation_func))
-
-            # 这里给出的(i,j)都是相对于input的偏移，但是对于output，我们希望得到的是相对这个的偏移
-            with vv_set_act_bit:
-                out_i = i//self.stride[0]
-                out_j = j//self.stride[1]
-
-                self.out_act_ten.get_vec([out_i,out_j,0],self.columns).assign(shifted_vec)
+        if next_posi[0] >= 0 and next_posi[1] >=0:
+            next_computation()
 
 
         return self.result_vec
+
 
     def send_act(self):
         assert self.aggregate
