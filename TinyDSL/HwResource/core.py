@@ -58,6 +58,12 @@ class Core_allocator:
             if self.core_allocate_state.query(i) == 'allocated':
                 yield self.core_list[i]
 
+    def allocated_core_id(self):
+        for i in range(self.core_cnt):
+            if self.core_allocate_state.query(i) == 'allocated':
+                yield i
+
+
 class meu:
     '''
     just record infomation of sub matrix

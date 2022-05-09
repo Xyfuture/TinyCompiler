@@ -133,6 +133,10 @@ class InstBuffer():
         with open(path,'wb') as f:
             pickle.dump(inst_list,f)
 
+    def save_asm(self,path='./tmp.txt'):
+        with open(path,'w') as f:
+            for cur in self.inst_list:
+                f.write(cur.dump_asm()+'\n')
 
 
 # class InstBuffer(linkList):

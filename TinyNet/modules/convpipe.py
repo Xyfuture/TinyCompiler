@@ -8,10 +8,10 @@ from TinyNet.functions.concat import concat
 
 
 class ConvPipeLayer:
-    def __init__(self,conv_config:dict,input_shape,output_shape,misc_config):
+    def __init__(self,conv_config:dict,input_shape,output_shape,misc_config,cur_core_allocator=core_allocator):
         self.conv_config = conv_config
         self.misc_config = misc_config
-
+        self.cur_core_allocator = cur_core_allocator
 
         conv_args = ['in_channels', 'out_channels', 'kernel_size', 'stride',
                      'padding', 'groups', 'bias', 'activation_func']
@@ -59,7 +59,7 @@ class ConvPipeLayer:
                     tmp_core_mat_shape[0] = self.rows - i*self.core_mat_rows
                     tmp_posi[0][1] = self.rows
                 if (j+1)*self.core_mat_columns > self.columns:
-                    tmp_core_mat_shape[1] = self.core_mat_columns - j*self.core_mat_columns
+                    tmp_core_mat_shape[1] = self.columns - j*self.core_mat_columns
                     tmp_posi[1][1] = self.columns
 
                 tmp_posi = [slice(tmp_posi[i][0],tmp_posi[i][1]) for i in range(2)]
@@ -75,7 +75,7 @@ class ConvPipeLayer:
                 aggregate = False
                 if i == self.core_layout[0]-1:
                     aggregate = True
-                tmp_core_mat = ConvPipeCore(self.conv_config, misc_config, aggregate)
+                tmp_core_mat = ConvPipeCore(self.conv_config, misc_config, aggregate,self.cur_core_allocator)
                 row_list.append(tmp_core_mat)
 
 
@@ -134,21 +134,21 @@ class ConvPipeLayer:
                 # 这个 i，j的数量应该是对的，不需要修改
                 tmp_vec_list = [None for _ in range(self.core_layout[1])]
 
+                cur_posi = (i, j)
+                if j + self.stride[1] < self.in_act_pad_shape[1] - self.kernel_size[1] + 1:
+                    next_posi = (i, j + self.stride[1])
+                elif i + self.stride[0] < self.in_act_pad_shape[0] - self.kernel_size[0] + 1:
+                    next_posi = (i + self.stride[0], 0)
+                else:
+                    next_posi = (-1, -1)
+
                 for cur_conv_core_list in self.conv_core_array:
                     for t,cur_conv_core in enumerate(cur_conv_core_list):
-
-                        cur_posi = (i,j)
-                        if j+self.stride[1] < self.in_act_pad_shape[1]-self.kernel_size[1]+1:
-                            next_posi = (i,j+self.stride[1])
-                        elif i+self.stride[0] < self.in_act_pad_shape[0]-self.kernel_size[0]+1:
-                            next_posi = (i+self.stride[0],0)
-                        else:
-                            next_posi = (-1,-1)
 
                         tmp_vec = cur_conv_core.compute(pre_posi,cur_posi,next_posi,tmp_vec_list[t])
                         tmp_vec_list[t] = tmp_vec
 
-                        pre_posi = cur_posi
+                pre_posi = cur_posi
 
         for cur_conv_core_list in self.conv_core_array:
             for t, cur_conv_core in enumerate(cur_conv_core_list):
@@ -179,7 +179,7 @@ class ConvPipeLayer:
 
 # 单个核对应的权重和input
 class ConvPipeCore:
-    def __init__(self,conv_config:dict,misc_config:dict,aggregate=False):
+    def __init__(self,conv_config:dict,misc_config:dict,aggregate=False,cur_core_allocator=core_allocator):
         conv_args = ['in_channels','out_channels','kernel_size','stride',
                      'padding','groups','bias','activation_func']
         for arg in conv_args:
@@ -199,8 +199,8 @@ class ConvPipeCore:
 
         self.aggregate = aggregate # 是否是最后的聚集节点
 
-        self.core_id = core_allocator.get_core()
-        self.core = core_allocator.access_core(self.core_id)
+        self.core_id = cur_core_allocator.get_core()
+        self.core = cur_core_allocator.access_core(self.core_id)
 
         self.allocate()
 
