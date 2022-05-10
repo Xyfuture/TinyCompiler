@@ -189,6 +189,14 @@ class VectorVar:
 
         return gen
 
+    def __mul__(self, other):
+
+        def gen(result_vec):
+            inst = self.vv_inst_check_set(other,instruction.VVMUL)
+            self.vv_inst_set_result(inst,result_vec)
+
+        return gen
+
 
     # 激活函数
     def activation_func(self,func_name='relu'):

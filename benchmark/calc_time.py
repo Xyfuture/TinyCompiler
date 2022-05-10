@@ -31,9 +31,12 @@ class vgg11(nn.Module):
         x = self.classifier(x)
 
 
+
+
+
 # if __name__ == "__main__":
 net = vgg11()
-in_ten = torch.randn([1024,3,32,32])
+in_ten = torch.randn([1,3,32,32])
 
 t1 = time.time()
 out = net(in_ten)

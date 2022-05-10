@@ -18,6 +18,7 @@ class instruction:
     VVGTM = 'vvgtm'
     VVAND = 'vvand'
     VVSUB = 'vvsub'
+    VVMUL = 'vvmul'
 
     SEND = 'send'
     RECV = 'recv'

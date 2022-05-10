@@ -22,8 +22,9 @@ class net_gen():
 
         torch_tensor = torch.randn(tensor_shape)
         for i,stage in enumerate(self.net.stage_list):
-
-
+            if stage[0] == 'view':
+                torch_tensor = torch_tensor.view(torch_tensor.size(0),-1)
+            tensor_shape = list(torch_tensor.shape)
             # tmp_core_allocator = Core_allocator(core_config)
             tmp_core_id = core_allocator.get_core()
 
@@ -35,6 +36,8 @@ class net_gen():
 
             ret = (torch_tensor,pim_tensor)
             for cnt,layer in enumerate(stage):
+                if layer == 'view':
+                    continue
                 ret = layer(*ret)
 
             # 存储为dict
@@ -50,7 +53,7 @@ class net_gen():
                     core.inst_buffer.save_asm(cur_dir+'\\{}.txt'.format(core_id))
 
             torch_tensor,_ = ret
-            tensor_shape = list(torch_tensor.shape)
+
 
 
 class vgg8:
@@ -85,6 +88,38 @@ class vgg8:
         ]
 
 
+class vgg16:
+    def __init__(self):
+        self.conv1 = Conv(in_channels=3,out_channels=64,kernel_size=3,padding=1,activation_func='relu')
+        self.conv2 = Conv(in_channels=64,out_channels=64,kernel_size=3,padding=1,activation_func='relu')
+        self.max_pool1= MaxPooling(kernel_size=2,stride=2)
+        self.conv3 = Conv(in_channels=64,out_channels=128,kernel_size=3,padding=1,activation_func='relu')
+        self.conv4 = Conv(in_channels=128,out_channels=128,kernel_size=3,padding=1,activation_func='relu')
+        self.max_pool2 = MaxPooling(kernel_size=2,stride=2)
+        self.conv5 = Conv(in_channels=128,out_channels=256,kernel_size=3,padding=1,activation_func='relu')
+        self.conv6 = Conv(in_channels=256,out_channels=256,kernel_size=3,padding=1,activation_func='relu')
+        self.conv7 = Conv(in_channels=256,out_channels=256,kernel_size=3,padding=1,activation_func='relu')
+        self.max_pool3 = MaxPooling(kernel_size=2,stride=2)
+        self.conv8 = Conv(in_channels=256,out_channels=512,kernel_size=3,padding=1,activation_func='relu')
+        self.conv9 = Conv(in_channels=512,out_channels=512,kernel_size=3,padding=1,activation_func='relu')
+        self.conv10 = Conv(in_channels=512,out_channels=512,kernel_size=3,padding=1,activation_func='relu')
+        self.max_pool4 = MaxPooling(kernel_size=2,stride=2)
+        self.conv11 = Conv(in_channels=512,out_channels=512,kernel_size=3,padding=1,activation_func='relu')
+        self.conv12 = Conv(in_channels=512,out_channels=512,kernel_size=3,padding=1,activation_func='relu')
+        self.conv13 = Conv(in_channels=512,out_channels=512,kernel_size=3,padding=1,activation_func='relu')
+
+        self.linear1 = Linear(in_features=2048,out_features=1024)
+        self.linear2 = Linear(in_features=1024,out_features=1024)
+        self.linear3 = Linear(in_features=1024,out_features=10)
+
+        self.stage_list = [
+            [self.conv1] , [self.conv2,self.max_pool1] , [self.conv3],[self.conv4,self.max_pool2],
+            [self.conv5],[self.conv6],[self.conv7,self.max_pool3],[self.conv8],[self.conv9],[self.conv10,self.max_pool4],
+            [self.conv11],[self.conv12],[self.conv13],['view',self.linear1],[self.linear2],[self.linear3]
+        ]
+
+
+
 class lenet:
     def __init__(self):
 
@@ -111,6 +146,8 @@ class lenet:
 
 if __name__ == "__main__":
     tensor_shape = [1,3,32,32]
-    net = vgg8()
-    gen = net_gen(net,'./binary/vgg8/')
+    net = vgg16()
+    gen = net_gen(net,'./binary/vgg16/')
     gen.inst_gen(tensor_shape)
+
+    # core_allocator.get_core()

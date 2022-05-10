@@ -209,6 +209,11 @@ class ConvPipeCore:
         # 分配input 和 output feature map 的内存
         self.in_act_ten = TensorVar(self.in_act_pad_shape,self.core_id,self.act_bitwidth,location='heap')
         if self.aggregate:
+            if self.bias:
+                self.bias_vec = VectorVar(self.columns, self.core_id, 4,location='heap')
+
+            self.mul_vec = VectorVar(self.columns,self.core_id,4,location='heap')
+
             self.shift_vec = VectorVar(self.columns,self.core_id,4,location='heap')
             # 这里这个输出tensor应该是已经shift完的，就是原始act-bitwidth
             self.out_act_ten = TensorVar(self.out_act_shape,self.core_id,self.act_bitwidth,location='heap')
@@ -254,6 +259,8 @@ class ConvPipeCore:
         self.result_vec = VectorVar(self.columns,self.core_id,4)
         self.pre_vec = VectorVar(self.columns,self.core_id,4)
 
+
+
         # 这里还没有考虑量化，bias，act function的资源资源分配
 
     def recv_act(self,pre_act_func):
@@ -290,9 +297,14 @@ class ConvPipeCore:
                     self.pre_vec.assign(pre_vec)
                     self.result_vec.assign(self.result_vec+self.pre_vec)
 
+
             if self.aggregate:
+
                 with vv_set_4byte:
                     shifted_vec = VectorVar(self.columns, self.core_id, self.act_bitwidth)
+                    if self.bias:
+                        self.result_vec.assign(self.result_vec + self.bias_vec)
+                    self.result_vec.assign(self.result_vec * self.mul_vec)
                     shifted_vec.assign(self.result_vec >> self.shift_vec)
 
                 # relu函数激活
