@@ -140,14 +140,33 @@ class lenet:
             [self.conv3],[self.linear1],[self.linear2]
         ]
 
+class auto_encoder:
+    def __init__(self):
+
+        self.linear1 = Linear(in_features=4096,out_features=2048)
+        self.linear2 = Linear(in_features=2048,out_features=1024)
+        self.linear3 = Linear(in_features=1024,out_features=1024)
+
+        self.linear4 = Linear(in_features=1024,out_features=1024)
+        self.linear5 = Linear(in_features=1024,out_features=2048)
+        self.linear6 = Linear(in_features=2048,out_features=4096)
+
+        self.stage_list = [
+            [self.linear1],[self.linear2],[self.linear3],
+            [self.linear4],[self.linear5],[self.linear6]
+        ]
+
 
 
 
 
 if __name__ == "__main__":
-    tensor_shape = [1,3,32,32]
-    net = vgg16()
-    gen = net_gen(net,'./binary/vgg16/')
+    # tensor_shape = [1,3,32,32]
+    # net = vgg16()
+
+    net = auto_encoder()
+    tensor_shape = [1,4096]
+    gen = net_gen(net,'./binary/auto_encoder/')
     gen.inst_gen(tensor_shape)
 
     # core_allocator.get_core()
