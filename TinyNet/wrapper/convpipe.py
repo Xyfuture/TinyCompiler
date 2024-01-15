@@ -45,7 +45,7 @@ class Conv(module):
 
         self.input_shape = []
         self.output_shape = []
-        self.conv_layer:ConvLayer = None
+        self.conv_layer = None
 
 
     def torch_forward(self, input_tensors:torch.Tensor):
