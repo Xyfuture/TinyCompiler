@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from TinyGraph.Graph import MicroNode, DepTensor
 
 

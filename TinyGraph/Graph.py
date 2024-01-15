@@ -1,3 +1,7 @@
+from __future__ import annotations
+from typing import Dict
+
+
 class MicroNode:
     """
     生成核上的指令
