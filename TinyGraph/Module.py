@@ -33,5 +33,7 @@ class TransferNode(MicroNode):
     pass
 
 
-class ConvComputeNode(MicroNode):
-    pass
+class MatVecMulNode(MicroNode):
+    def __init__(self,core_id:int, ):
+        super().__init__()
+        pass
