@@ -2,7 +2,7 @@ from __future__ import  annotations
 from typing import List, Dict
 
 
-class MicroOp:
+class MachineOp:
     def __init__(self, core_id: int, op_name: str, *args, **kwargs):
         self.core_id = core_id
         self.op_name = op_name
@@ -19,7 +19,7 @@ class Core:
         self.core_id = Core.id_counter
         Core.id_map[self.core_id] = self
 
-        self.inst: List[MicroOp] = []
+        self.inst: List[MachineOp] = []
 
     @classmethod
     def get_core_by_id(cls, core_id: int):
