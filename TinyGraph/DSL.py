@@ -4,8 +4,8 @@ from typing import Tuple, Optional
 
 import numpy as np
 
-from TinyGraph.Graph import MicroNode, MicroOp, MicroGraph
-from TinyGraph.Module import TransferOp, MatVecMulOp
+from TinyGraph.Graph import MicroGraph
+from TinyGraph.Ops import TransferOp
 
 
 class XbarGroupVar:
@@ -34,7 +34,6 @@ class MatrixVar:
 
     def mul_vector(self, src_vector: DepTensor):
         # transfer the vector to the xbar core
-        # 先把横着的都算完,然后在算纵向的
 
         pass
 
@@ -74,17 +73,17 @@ class DepTensor:
     应该要压缩一个维度,虽然叫tensor,但应该主要是1维或者2维的,自由度不是很高
     """
 
-    def __init__(self, tensor_shape: Tuple[int, ...], reduced_dim_size: int,
+    def __init__(self, tensor_shape: Tuple[int, ...], reduced_dim_size: int = 1,
                  tensor_op: Optional[np.ndarray] = None, tensor_position: Optional[np.ndarray] = None):
         self.tensor_shape = tensor_shape
         self.reduced_dim_size = reduced_dim_size
 
-        if tensor_op:
+        if tensor_op is not None:
             assert tensor_op.shape == tensor_shape
             self.tensor_op = tensor_op
         else:
             self.tensor_op = np.full(self.shape, None, dtype=object)
-        if tensor_position:
+        if tensor_position is not None:
             assert tensor_position.shape == tensor_shape
             self.tensor_position = tensor_position
         else:
@@ -112,7 +111,16 @@ class DepTensor:
     def flat(self):
         return zip(self.tensor_op.flat, self.tensor_position.flat)
 
-    def move_to(self,core_id:int):
-        pass
+    def move_to(self, core_id: int):
+        for index, position in np.ndenumerate(self.tensor_position):
+            if position == core_id:
+                continue
+            else:
+                trans_op = TransferOp(position, core_id, self.reduced_dim_size)
+                input_nodes = [self.tensor_op[index].node]
 
+                MicroGraph.current_graph.create_node(input_nodes, trans_op)
 
+                self.tensor_op[index] = trans_op
+                self.tensor_position[index] = core_id
+        return self

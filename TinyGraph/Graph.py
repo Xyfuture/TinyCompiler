@@ -2,7 +2,6 @@ from __future__ import annotations
 from typing import Dict, List, Optional, Callable
 import numpy as np
 
-from TinyGraph.DSL import DepTensor
 
 
 class MicroOp:

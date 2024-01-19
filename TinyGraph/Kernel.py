@@ -4,8 +4,8 @@ from typing import Tuple, List, Dict
 import numpy as np
 from TinyGraph.Graph import MicroGraph, MicroOp
 
-from TinyGraph.DSL import DepTensor, MatrixVar, XbarGroupVar
-from TinyGraph.Module import TransferOp, AddOp
+from TinyGraph.DSL import MatrixVar, XbarGroupVar, DepTensor
+from TinyGraph.Ops import AddOp, TransferOp
 
 
 def _make_data_to_core_kernel(src: DepTensor, core_id: int) -> DepTensor:
@@ -101,6 +101,8 @@ def _conv2d_kernel(input_feature_map: DepTensor,
     with MicroGraph.current_graph.use_sequential_node_dep():
         for i in range(rows):
             for j in range(cols):
+                # 先把横着的都算完,然后在算纵向的
+
                 pass
 
     return output_feature_map
