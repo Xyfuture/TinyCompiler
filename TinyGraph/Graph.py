@@ -9,7 +9,7 @@ class MicroOp:
     def __init__(self):
         self.node: Optional[MicroNode] = None
 
-        self.output_dep_tensor:Optional[DepTensor] = None
+        # self.output_dep_tensor:Optional[DepTensor] = None
 
     def register_node(self, node: MicroNode):
         self.node = node
@@ -96,7 +96,7 @@ class MicroGraph:
 
         self._node_creator = _NodeCreate(self)
 
-        self.create_node = self._node_creator.simple_create_node
+        self.create_node: Callable[[List[MicroNode], MicroOp], MicroNode] = self._node_creator.simple_create_node
 
     def add_node(self, node: MicroNode):
         self.nodes.append(node)
@@ -115,17 +115,21 @@ class _NodeCreate:
         self.pre_graph_creator = []
         self.next_graph_creator = None
 
-    def simple_create_node(self, input_nodes: List[MicroNode], micro_op: MicroOp, *args, **kwargs):
+    def simple_create_node(self, input_nodes: List[MicroNode], micro_op: MicroOp, *args, **kwargs) -> MicroNode:
         node = MicroNode(self.graph, input_nodes, micro_op, *args, **kwargs)
         self.graph.add_node(node)
 
-    def sequential_create_node(self, input_nodes: List[MicroNode], micro_op: MicroOp, *args, **kwargs):
+        return node
+
+    def sequential_create_node(self, input_nodes: List[MicroNode], micro_op: MicroOp, *args, **kwargs) -> MicroNode:
         if self._sequential_last_node and self._sequential_last_node[-1]:
             input_nodes.append(self._sequential_last_node[-1])
 
         node = MicroNode(self.graph, input_nodes, micro_op, *args, **kwargs)
         self.graph.add_node(node)
         self._sequential_last_node[-1] = node
+
+        return node
 
     def set_graph_creator_in_context(self, creator):
         self.next_graph_creator = creator
@@ -143,5 +147,3 @@ class _NodeCreate:
 
         self.graph.create_node = self.pre_graph_creator.pop()
         self.next_graph_creator = None
-
-
