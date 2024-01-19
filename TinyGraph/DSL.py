@@ -94,6 +94,11 @@ class DepTensor:
         return self.tensor_shape
 
     def __getitem__(self, item):
+        if not any([isinstance(x, slice) for x in item]):
+            item = list(item)
+            item[-1] = slice(item[-1], item[-1] + 1)
+            item = tuple(item)
+
         tensor_op = self.tensor_op[item]
         tensor_position = self.tensor_position[item]
         return DepTensor(tensor_op.shape, self.reduced_dim_size, tensor_op, tensor_position)
