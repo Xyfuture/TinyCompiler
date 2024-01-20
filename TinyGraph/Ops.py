@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional, Tuple
 
 from TinyGraph.Graph import MicroOp
 
@@ -25,10 +25,11 @@ class TransferOp(MicroOp):
 
 
 class MatVecMulOp(MicroOp):
-    def __init__(self, core_id: int, input_size: int, output_size: int, src_vec_op_list: List[MicroOp]):
+    def __init__(self, core_id: int,xbar_group_id:int, input_size: int, output_size: int, src_vec_op_list: Optional[List[MicroOp]] =None):
         super().__init__()
 
         self.core_id = core_id
+        self.xbar_group_id = xbar_group_id
         self.src_vec_op_list = src_vec_op_list
 
         self.input_size = input_size
@@ -36,3 +37,16 @@ class MatVecMulOp(MicroOp):
 
     def code_gen(self):
         pass
+
+
+class MaxPool2dOp(MicroOp):
+    def __init__(self,core_id:int,kernel_size:Tuple[int,int],vector_size:int):
+        super().__init__()
+        self.core_id = core_id
+
+        self.kernel_size = kernel_size
+        self.vector_size = vector_size
+
+    def code_gen(self):
+        pass
+

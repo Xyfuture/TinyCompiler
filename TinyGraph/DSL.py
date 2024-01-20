@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 import numpy as np
 
@@ -25,7 +25,8 @@ class MatrixVar:
     def __init__(self, matrix_shape: Tuple[int, int]):
         self.matrix_shape = matrix_shape
 
-        self.xbar_group_array = np.zeros(1, dtype=object)
+        # 不是二维,只能是一维的
+        self.xbar_group_array:List[XbarGroupVar] = []
 
         pass
 
@@ -75,19 +76,24 @@ class DepTensor:
 
     def __init__(self, tensor_shape: Tuple[int, ...], reduced_dim_size: int = 1,
                  tensor_op: Optional[np.ndarray] = None, tensor_position: Optional[np.ndarray] = None):
-        self.tensor_shape = tensor_shape
+
+        # tensor_shape expect to be tuple
+        # may be int will be passed in
         self.reduced_dim_size = reduced_dim_size
 
         if tensor_op is not None:
             assert tensor_op.shape == tensor_shape
             self.tensor_op = tensor_op
         else:
-            self.tensor_op = np.full(self.shape, None, dtype=object)
+            self.tensor_op = np.full(tensor_shape, None, dtype=object)
         if tensor_position is not None:
             assert tensor_position.shape == tensor_shape
             self.tensor_position = tensor_position
         else:
-            self.tensor_position = np.full(self.shape, 0)
+            self.tensor_position = np.full(tensor_shape, 0)
+
+        self.tensor_shape = self.tensor_position.shape
+
 
     @property
     def shape(self) -> Tuple[int, ...]:
@@ -128,4 +134,16 @@ class DepTensor:
 
                 self.tensor_op[index] = trans_op
                 self.tensor_position[index] = core_id
+        return self
+
+    def shares_memory(self,other:DepTensor):
+        return np.shares_memory(self.tensor_op,other.tensor_op) \
+                and np.shares_memory(self.tensor_position,other.tensor_position)
+
+    def reshape(self,new_shape:Tuple[int,...]):
+        self.tensor_op = self.tensor_op.reshape(new_shape)
+        self.tensor_position = self.tensor_position.reshape(new_shape)
+
+        self.tensor_shape = self.tensor_op.shape
+
         return self

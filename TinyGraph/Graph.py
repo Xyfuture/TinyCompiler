@@ -1,7 +1,8 @@
 from __future__ import annotations
-from typing import Dict, List, Optional, Callable
-import numpy as np
 
+from collections import deque
+from typing import Dict, List, Optional, Callable, Deque
+import numpy as np
 
 
 class MicroOp:
@@ -103,6 +104,28 @@ class MicroGraph:
     def use_sequential_node_dep(self):
         self._node_creator.set_graph_creator_in_context(self._node_creator.sequential_create_node)
         return self._node_creator
+
+
+def topo_sort(graph: MicroGraph) -> List[MicroNode]:
+    sorted_nodes: List[MicroNode] = []
+    pending_queue: Deque[MicroNode] = deque()
+    dep_map: Dict[MicroNode, int] = {}
+
+    for node in graph.nodes:
+        dep_map[node] = len(node._input_nodes)
+        if len(node._input_nodes) == 0:
+            pending_queue.append(node)
+
+    while len(pending_queue):
+        current_node = pending_queue.pop()
+        sorted_nodes.append(current_node)
+        for node in current_node._output_nodes.keys():
+            dep_map[node] -= 1
+            if dep_map[node] == 0:
+                pending_queue.append(node)
+
+    return sorted_nodes
+
 
 
 class _NodeCreate:
