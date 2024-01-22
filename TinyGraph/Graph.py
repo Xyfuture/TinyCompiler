@@ -117,7 +117,7 @@ def topo_sort(graph: MicroGraph) -> List[MicroNode]:
             pending_queue.append(node)
 
     while len(pending_queue):
-        current_node = pending_queue.pop()
+        current_node = pending_queue.popleft()
         sorted_nodes.append(current_node)
         for node in current_node._output_nodes.keys():
             dep_map[node] -= 1
