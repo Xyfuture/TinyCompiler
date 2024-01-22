@@ -5,7 +5,8 @@ from typing import Tuple, Optional, List
 import numpy as np
 
 from TinyGraph.Graph import MicroGraph
-from TinyGraph.Ops import TransferOp
+from TinyGraph.Machine import Core
+from TinyGraph.Ops import TransferOp, PadOp
 
 
 class XbarGroupVar:
@@ -26,12 +27,17 @@ class MatrixVar:
         self.matrix_shape = matrix_shape
 
         # 不是二维,只能是一维的
-        self.xbar_group_array:List[XbarGroupVar] = []
+        self.xbar_group_array: List[XbarGroupVar] = []
 
         pass
 
     def mapping(self):
         pass
+
+    def dummy_mapping(self):
+        core = Core()
+
+        self.xbar_group_array.append(XbarGroupVar(self.matrix_shape, core.core_id))
 
     def mul_vector(self, src_vector: DepTensor):
         # transfer the vector to the xbar core
@@ -94,22 +100,40 @@ class DepTensor:
 
         self.tensor_shape = self.tensor_position.shape
 
-
     @property
     def shape(self) -> Tuple[int, ...]:
         return self.tensor_shape
 
-    def __getitem__(self, item):
-        if not any([isinstance(x, slice) for x in item]):
+    def decorate_item(self, item):
+        if isinstance(item, tuple) and not any([isinstance(x, slice) for x in item]):
             item = list(item)
             item[-1] = slice(item[-1], item[-1] + 1)
             item = tuple(item)
+        elif isinstance(item, int):
+            item = (slice(item, item + 1))
 
+        return item
+
+    def __getitem__(self, item):
+        # if isinstance(item,tuple) and not any([isinstance(x, slice) for x in item]):
+        #     item = list(item)
+        #     item[-1] = slice(item[-1], item[-1] + 1)
+        #     item = tuple(item)
+        # if isinstance(item,int):
+        #     item = (slice(item,item+1))
+        item = self.decorate_item(item)
         tensor_op = self.tensor_op[item]
         tensor_position = self.tensor_position[item]
         return DepTensor(tensor_op.shape, self.reduced_dim_size, tensor_op, tensor_position)
 
     def __setitem__(self, item, value):
+        # if isinstance(item, tuple) and not any([isinstance(x, slice) for x in item]):
+        #     item = list(item)
+        #     item[-1] = slice(item[-1], item[-1] + 1)
+        #     item = tuple(item)
+        # if isinstance(item, int):
+        #     item = (slice(item, item + 1))
+        item = self.decorate_item(item)
         if isinstance(value, DepTensor):
             assert self.reduced_dim_size == value.reduced_dim_size
 
@@ -136,14 +160,39 @@ class DepTensor:
                 self.tensor_position[index] = core_id
         return self
 
-    def shares_memory(self,other:DepTensor):
-        return np.shares_memory(self.tensor_op,other.tensor_op) \
-                and np.shares_memory(self.tensor_position,other.tensor_position)
+    def shares_memory(self, other: DepTensor):
+        return np.shares_memory(self.tensor_op, other.tensor_op) \
+            and np.shares_memory(self.tensor_position, other.tensor_position)
 
-    def reshape(self,new_shape:Tuple[int,...]):
+    def reshape(self, new_shape: Tuple[int, ...]):
         self.tensor_op = self.tensor_op.reshape(new_shape)
         self.tensor_position = self.tensor_position.reshape(new_shape)
 
         self.tensor_shape = self.tensor_op.shape
 
         return self
+
+    @staticmethod
+    def pad(input_tensor: DepTensor, pad_width: int):
+        # 默认是四周的映射模式
+        if pad_width:
+            pad_op = PadOp(-1)
+            MicroGraph.current_graph.create_node([], pad_op)
+
+            tensor_op = np.pad(input_tensor.tensor_op, pad_width=pad_width, mode='constant', constant_values=pad_op)
+            tensor_position = np.pad(input_tensor.tensor_position, pad_width=pad_width, mode='constant',
+                                     constant_values=-1)
+            shape = tensor_op.shape
+            output = DepTensor(shape, input_tensor.reduced_dim_size, tensor_op, tensor_position)
+        else:
+            output = input_tensor
+        return output
+
+    def __copy__(self):
+        new_tensor = DepTensor(
+            self.tensor_shape,self.reduced_dim_size,
+            self.tensor_op.copy(),
+            self.tensor_position.copy()
+        )
+
+        return new_tensor

@@ -25,7 +25,8 @@ class TransferOp(MicroOp):
 
 
 class MatVecMulOp(MicroOp):
-    def __init__(self, core_id: int,xbar_group_id:int, input_size: int, output_size: int, src_vec_op_list: Optional[List[MicroOp]] =None):
+    def __init__(self, core_id: int, xbar_group_id: int, input_size: int, output_size: int,
+                 src_vec_op_list: Optional[List[MicroOp]] = None):
         super().__init__()
 
         self.core_id = core_id
@@ -40,7 +41,7 @@ class MatVecMulOp(MicroOp):
 
 
 class MaxPool2dOp(MicroOp):
-    def __init__(self,core_id:int,kernel_size:Tuple[int,int],vector_size:int):
+    def __init__(self, core_id: int, kernel_size: Tuple[int, int], vector_size: int):
         super().__init__()
         self.core_id = core_id
 
@@ -50,3 +51,12 @@ class MaxPool2dOp(MicroOp):
     def code_gen(self):
         pass
 
+
+class PadOp(MicroOp):
+    def __init__(self, core_id: int):
+        super().__init__()
+
+        self.core_id = core_id
+
+    def code_gen(self):
+        pass

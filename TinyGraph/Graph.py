@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Dict, List, Optional, Callable, Deque
+from typing import Dict, List, Optional, Callable, Deque, Tuple
 import numpy as np
 
 
@@ -96,13 +96,13 @@ class MicroGraph:
 
         self._node_creator = _NodeCreate(self)
 
-        self.create_node: Callable[[List[MicroNode], MicroOp], MicroNode] = self._node_creator.simple_create_node
+        self.create_node: Callable[[List[MicroNode], MicroOp], MicroNode] = self._node_creator.__call__
 
     def add_node(self, node: MicroNode):
         self.nodes.append(node)
 
     def use_sequential_node_dep(self):
-        self._node_creator.set_graph_creator_in_context(self._node_creator.sequential_create_node)
+        self._node_creator.set_graph_creator_in_context('sequential')
         return self._node_creator
 
 
@@ -127,15 +127,18 @@ def topo_sort(graph: MicroGraph) -> List[MicroNode]:
     return sorted_nodes
 
 
-
 class _NodeCreate:
     def __init__(self, graph: MicroGraph):
         self.graph = graph
 
         self._sequential_last_node: List[Optional[MicroNode]] = []
 
-        self.pre_graph_creator = []
-        self.next_graph_creator = None
+        self.create_func_stack: List[Tuple[Callable,str]] = [(self.simple_create_node,'simple')]
+
+        self._current_create_func: Callable[[List[MicroNode], MicroOp], MicroNode] = self.simple_create_node
+        self._current_create_func_name:str = 'simple'
+
+        self._next_create_func_name: str = ""
 
     def simple_create_node(self, input_nodes: List[MicroNode], micro_op: MicroOp, *args, **kwargs) -> MicroNode:
         node = MicroNode(self.graph, input_nodes, micro_op, *args, **kwargs)
@@ -153,19 +156,31 @@ class _NodeCreate:
 
         return node
 
-    def set_graph_creator_in_context(self, creator):
-        self.next_graph_creator = creator
+    def set_graph_creator_in_context(self, creator_name: str):
+        self._next_create_func_name = creator_name
+
+    def get_create_func_by_name(self,create_func_name:str) -> Callable:
+        if create_func_name == "simple":
+            return self.simple_create_node
+        elif create_func_name == 'sequential':
+            return self.sequential_create_node
 
     def __enter__(self):
-        self.pre_graph_creator.append(self.graph.create_node)
-        self.graph.create_node = self.next_graph_creator
+        self._current_create_func_name = self._next_create_func_name
+        self._current_create_func = self.get_create_func_by_name(self._next_create_func_name)
+        self.create_func_stack.append((self._current_create_func,self._current_create_func_name))
 
-        if self.graph.create_node is self.sequential_create_node:
+        if self._current_create_func_name == 'sequential':
             self._sequential_last_node.append(None)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self.graph.create_node is self.sequential_create_node:
+        if self._current_create_func_name == 'sequential':
             self._sequential_last_node.pop()
 
-        self.graph.create_node = self.pre_graph_creator.pop()
-        self.next_graph_creator = None
+        self.create_func_stack.pop()
+        self._current_create_func,self._current_create_func_name = self.create_func_stack[-1]
+
+        self._next_create_func_name = None
+
+    def __call__(self, input_nodes: List[MicroNode], micro_op: MicroOp) -> MicroNode:
+        return self._current_create_func(input_nodes, micro_op)

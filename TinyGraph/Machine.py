@@ -14,7 +14,7 @@ class Core:
     id_counter: int = 0
     id_map: Dict[int, Core] = {}
 
-    def __init__(self, core_id: int):
+    def __init__(self):
         Core.id_counter += 1
         self.core_id = Core.id_counter
         Core.id_map[self.core_id] = self
@@ -24,4 +24,5 @@ class Core:
     @classmethod
     def get_core_by_id(cls, core_id: int):
         return cls.id_map[core_id]
+
 

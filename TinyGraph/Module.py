@@ -3,6 +3,7 @@ from typing import Tuple
 import numpy as np
 
 from TinyGraph.DSL import MatrixVar, DepTensor
+from TinyGraph.Kernel import _conv2d_kernel
 
 
 class DepModule:
@@ -29,38 +30,39 @@ class DepConv2d(DepModule):
 
         self.weight_matrix_shape = (in_channels * kernel_size[0] * kernel_size[1], out_channels)
 
-        self.xbar_matrix = MatrixVar(self.weight_matrix_shape, )
+        self.weight_matrix = MatrixVar(self.weight_matrix_shape, )
+        self.weight_matrix.dummy_mapping()
 
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
-        pass
+        output_tensor = _conv2d_kernel(input_tensor, self.weight_matrix,
+                                       self.in_channels, self.out_channels,
+                                       self.kernel_size, self.stride, self.padding)
+        return output_tensor
+
 
 class DepMaxpool2d(DepModule):
-    def __init__(self, kernel_size: Tuple[int, int], stride: Tuple[int,int],padding: int = 0):
+    def __init__(self, kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: int = 0):
         super().__init__()
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
 
-    def forward(self, input_tensor:DepTensor):
+    def forward(self, input_tensor: DepTensor):
         pass
 
 
 class DepLinear(DepModule):
-    def __init__(self,in_features: int, out_features: int,bias: bool = True):
+    def __init__(self, in_features: int, out_features: int, bias: bool = True):
         super().__init__()
         self.in_features = in_features
         self.out_features = out_features
         self.bias = bias
 
-
-
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
         pass
+
 
 class DepElementAdd(DepModule):
     def __init__(self):
         super().__init__()
         pass
-
-
-

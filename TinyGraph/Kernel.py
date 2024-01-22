@@ -1,6 +1,7 @@
 import copy
 import operator
 from functools import reduce
+from math import floor
 from typing import Tuple, List, Dict
 
 import numpy as np
@@ -81,7 +82,7 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> Dep
 
     input_nodes: List[MicroNode] = []
     op: MicroOp
-    for op in np.nditer(input_vec.tensor_op):
+    for op in input_vec.tensor_op.flat:
         # check op is not None or 0
         if op:
             input_nodes.append(op.node)
@@ -102,39 +103,51 @@ def _conv2d_kernel(input_feature_map: DepTensor,
                    stride: Tuple[int, int] = (1, 1),
                    padding: int = 0,
                    ) -> DepTensor:
+    def get_xbar_group_input(window_tensor: DepTensor, start_index: int, xbar_group: XbarGroupVar) -> DepTensor:
+        interval = window_tensor.reduced_dim_size
+
+        start = floor(start_index / interval)
+        end = floor(start_index + xbar_group.xbar_group_shape[0] / interval)
+
+        return window_tensor.reshape((-1,))[start:end + 1]
+
     # check
-    assert in_channels == input_feature_map.reduced_dim_size and in_channels == weight_matrix.matrix_shape[0]
+    assert in_channels == input_feature_map.reduced_dim_size \
+           and in_channels * kernel_size[0] * kernel_size[1] == weight_matrix.matrix_shape[0]
     assert out_channels == weight_matrix.matrix_shape[1]
 
-    pad_input_op = np.pad(input_feature_map.tensor_op, ((padding, padding), (padding, padding)))
-    pad_input_position = np.pad(input_feature_map.tensor_position, ((padding, padding), (padding, padding)))
-    pad_shape = pad_input_op.shape
+    # pad_input_op = np.pad(input_feature_map.tensor_op, ((padding, padding), (padding, padding)))
+    # pad_input_position = np.pad(input_feature_map.tensor_position, ((padding, padding), (padding, padding)))
+    # pad_shape = pad_input_op.shape
+    #
+    # pad_input_tensor = DepTensor(pad_shape, input_feature_map.reduced_dim_size, pad_input_op, pad_input_position)
 
-    pad_input_tensor = DepTensor(pad_shape, input_feature_map.reduced_dim_size, pad_input_op, pad_input_position)
+    pad_input_tensor = DepTensor.pad(input_feature_map, padding)
+    pad_shape = pad_input_tensor.shape
 
-    output_shape = (
+    output_shape = tuple(
         (pad_shape[i] - kernel_size[i]) // stride[i] + 1 for i in range(len(kernel_size))
     )
 
     rows, cols = output_shape
 
-    output_feature_map = DepTensor(tuple(output_shape), out_channels, )
+    output_feature_map = DepTensor(output_shape, out_channels, )
 
     xbar_rows = len(weight_matrix.xbar_group_array)
     core_input_tensor_map: Dict[int, DepTensor] = {}
 
     for xbar_group in weight_matrix.xbar_group_array:
         if xbar_group.core_id not in core_input_tensor_map:
-            core_input_tensor_map[xbar_group.core_id] = copy.deepcopy(pad_input_tensor)
-
-    partial_sum_list: List[DepTensor] = []
+            core_input_tensor_map[xbar_group.core_id] = copy.copy(pad_input_tensor)
+            # core_input_tensor_map[xbar_group.core_id] = copy.deepcopy(pad_input_tensor)
 
     with MicroGraph.current_graph.use_sequential_node_dep():
         for i in range(rows):
             for j in range(cols):
                 # 一次窗口
                 # 先把横着的都算完,然后在算纵向的
-
+                partial_sum_list: List[DepTensor] = []
+                start_index = 0
                 for xbar_i in range(xbar_rows):
                     # 计算这次需要的窗口
                     # different core use different window
@@ -148,10 +161,13 @@ def _conv2d_kernel(input_feature_map: DepTensor,
 
                     partial_sum_list.append(
                         _xbar_vec_mul_kernel(
-                            current_input_window,
+                            get_xbar_group_input(current_input_window, start_index,
+                                                 weight_matrix.xbar_group_array[xbar_i]),
                             weight_matrix.xbar_group_array[xbar_i]
                         )
                     )
+
+                    start_index += weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0]
 
                 current_output = _sum_kernel(partial_sum_list)
                 output_feature_map[i, j] = current_output
@@ -168,11 +184,14 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
     core_id: int = input_feature_map.tensor_position[0, 0]
     vector_size = input_feature_map.reduced_dim_size
 
-    pad_input_op = np.pad(input_feature_map.tensor_op, ((padding, padding), (padding, padding)))
-    pad_input_position = np.pad(input_feature_map.tensor_position, ((padding, padding), (padding, padding)))
-    pad_shape = pad_input_op.shape
+    # pad_input_op = np.pad(input_feature_map.tensor_op, ((padding, padding), (padding, padding)))
+    # pad_input_position = np.pad(input_feature_map.tensor_position, ((padding, padding), (padding, padding)))
+    # pad_shape = pad_input_op.shape
+    #
+    # pad_input_tensor = DepTensor(pad_shape, input_feature_map.reduced_dim_size, pad_input_op, pad_input_position)
 
-    pad_input_tensor = DepTensor(pad_shape, input_feature_map.reduced_dim_size, pad_input_op, pad_input_position)
+    pad_input_tensor = DepTensor.pad(input_feature_map, padding)
+    pad_shape = pad_input_tensor.shape
 
     output_shape = (
         (pad_shape[i] - kernel_size[i]) // stride[i] + 1 for i in range(len(kernel_size))
@@ -204,8 +223,29 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
 
 def _matrix_vec_mul_kernel(input_tensor: DepTensor,
                            weight_matrix: MatrixVar) -> DepTensor:
-
     # 可以和conv 结合起来写
-    output_tensor = DepTensor()
+    interval = input_tensor.reduced_dim_size
 
-    pass
+    with MicroGraph.current_graph.use_sequential_node_dep():
+        processed_index = 0
+        partial_sum_list: List[DepTensor] = []
+
+        for xbar_i in range(len(weight_matrix.xbar_group_array)):
+            core_id = weight_matrix.xbar_group_array[xbar_i].core_id
+
+            input_start_index = floor(processed_index / interval)
+            input_end_index = floor((processed_index + weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0])
+                                    / interval) + 1
+
+            partial_sum_list.append(
+                _xbar_vec_mul_kernel(
+                    input_tensor[input_start_index:input_end_index],
+                    weight_matrix.xbar_group_array[xbar_i]
+                )
+            )
+
+            processed_index += weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0]
+
+        current_output = _sum_kernel(partial_sum_list)
+
+    return current_output
