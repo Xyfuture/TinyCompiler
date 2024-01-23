@@ -4,6 +4,7 @@ from typing import Tuple, Optional, List
 
 import numpy as np
 
+from TinyGraph.ConductArray import ConductArray
 from TinyGraph.Graph import MicroGraph
 from TinyGraph.Machine import Core
 from TinyGraph.Ops import TransferOp, PadOp
@@ -81,22 +82,20 @@ class DepTensor:
     """
 
     def __init__(self, tensor_shape: Tuple[int, ...], reduced_dim_size: int = 1,
-                 tensor_op: Optional[np.ndarray] = None, tensor_position: Optional[np.ndarray] = None):
+                 tensor_op: Optional[ConductArray] = None, tensor_position: Optional[ConductArray] = None):
 
         # tensor_shape expect to be tuple
         # may be int will be passed in
         self.reduced_dim_size = reduced_dim_size
 
         if tensor_op is not None:
-            assert tensor_op.shape == tensor_shape
             self.tensor_op = tensor_op
         else:
-            self.tensor_op = np.full(tensor_shape, None, dtype=object)
+            self.tensor_op = ConductArray.full(tensor_shape, None)
         if tensor_position is not None:
-            assert tensor_position.shape == tensor_shape
             self.tensor_position = tensor_position
         else:
-            self.tensor_position = np.full(tensor_shape, 0)
+            self.tensor_position = ConductArray.full(tensor_shape, 0)
 
         self.tensor_shape = self.tensor_position.shape
 
@@ -115,24 +114,15 @@ class DepTensor:
         return item
 
     def __getitem__(self, item):
-        # if isinstance(item,tuple) and not any([isinstance(x, slice) for x in item]):
-        #     item = list(item)
-        #     item[-1] = slice(item[-1], item[-1] + 1)
-        #     item = tuple(item)
-        # if isinstance(item,int):
-        #     item = (slice(item,item+1))
+        # 总是返回一个DepTensor,不会直接返回值
         item = self.decorate_item(item)
         tensor_op = self.tensor_op[item]
         tensor_position = self.tensor_position[item]
         return DepTensor(tensor_op.shape, self.reduced_dim_size, tensor_op, tensor_position)
 
     def __setitem__(self, item, value):
-        # if isinstance(item, tuple) and not any([isinstance(x, slice) for x in item]):
-        #     item = list(item)
-        #     item[-1] = slice(item[-1], item[-1] + 1)
-        #     item = tuple(item)
-        # if isinstance(item, int):
-        #     item = (slice(item, item + 1))
+        # 总是对一个slice进行赋值
+        # conduct array 针对区间赋值处理更好，能识别value为array的情况
         item = self.decorate_item(item)
         if isinstance(value, DepTensor):
             assert self.reduced_dim_size == value.reduced_dim_size
@@ -144,7 +134,7 @@ class DepTensor:
             self.tensor_position[item] = value[1]
 
     def flat(self):
-        return zip(self.tensor_op.flat, self.tensor_position.flat)
+        return zip(self.tensor_op.flat(), self.tensor_position.flat())
 
     def move_to(self, core_id: int):
         for index, position in np.ndenumerate(self.tensor_position):
@@ -159,10 +149,6 @@ class DepTensor:
                 self.tensor_op[index] = trans_op
                 self.tensor_position[index] = core_id
         return self
-
-    def shares_memory(self, other: DepTensor):
-        return np.shares_memory(self.tensor_op, other.tensor_op) \
-            and np.shares_memory(self.tensor_position, other.tensor_position)
 
     def reshape(self, new_shape: Tuple[int, ...]):
         self.tensor_op = self.tensor_op.reshape(new_shape)
@@ -179,20 +165,19 @@ class DepTensor:
             pad_op = PadOp(-1)
             MicroGraph.current_graph.create_node([], pad_op)
 
-            tensor_op = np.pad(input_tensor.tensor_op, pad_width=pad_width, mode='constant', constant_values=pad_op)
-            tensor_position = np.pad(input_tensor.tensor_position, pad_width=pad_width, mode='constant',
-                                     constant_values=-1)
+            tensor_op = ConductArray.pad(input_tensor.tensor_op, pad_width,pad_op)
+            tensor_position = ConductArray.pad(input_tensor.tensor_position, pad_width,-1)
             shape = tensor_op.shape
             output = DepTensor(shape, input_tensor.reduced_dim_size, tensor_op, tensor_position)
         else:
             output = input_tensor
         return output
 
-    def __copy__(self):
-        new_tensor = DepTensor(
-            self.tensor_shape,self.reduced_dim_size,
-            self.tensor_op.copy(),
-            self.tensor_position.copy()
-        )
-
-        return new_tensor
+    # def __copy__(self):
+    #     new_tensor = DepTensor(
+    #         self.tensor_shape, self.reduced_dim_size,
+    #         self.tensor_op.copy(),
+    #         self.tensor_position.copy()
+    #     )
+    #
+    #     return new_tensor

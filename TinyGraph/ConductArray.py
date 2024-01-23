@@ -38,12 +38,14 @@ class ConductArray:
     vec_proxy_ctor = np.vectorize(ObjectProxy)
 
     def __init__(self, shape: Optional[Tuple[int, ...]] = None, array_value: Union[np.ndarray, object] = None):
-        self._ndarray = np.zeros(shape, dtype=object)
+        # 不要再 ConductArray类之外调用init，使用full创建新的Conduct Array
         if isinstance(array_value, np.ndarray):
             # 这个ndarray 内部必须放的是 object proxy
-            self._ndarray = array_value[:]
+            # 减少复制的情况
+            self._ndarray= array_value[:]
         else:
             # 其他情况,实现full的功能
+            self._ndarray = np.zeros(shape, dtype=object)
             self._ndarray[:] = self.vec_proxy_ctor(array_value)
 
         self.shape = self._ndarray.shape
@@ -52,34 +54,42 @@ class ConductArray:
     def full(shape: Tuple[int, ...], value):
         return ConductArray(shape, value)
 
-    @staticmethod
-    def item_is_element(item: Tuple):
-        if isinstance(item, tuple):
-            if not any(isinstance(x, slice) for x in item):
-                return True
-        elif isinstance(item, int):
-            return True
-
-        return False
+    def item_is_element(self,item: Tuple):
+        # if isinstance(item, tuple):
+        #     if not any(isinstance(x, slice) for x in item):
+        #         return True
+        # elif isinstance(item, int):
+        #     return True
+        #
+        # return False
+        if isinstance(self._ndarray[item],np.ndarray):
+            return False
+        return True
 
     def __getitem__(self, item):
+        # 与 ndarray行为尽量相似，可以返回一个值 or 一个新的 conduct array
         if self.item_is_element(item):
+            # 单个值 在DepTensor中应该不会遇到
             return self._ndarray[item].get()
-        return self._ndarray[item]
+        tmp_array = self._ndarray[item]
+        return ConductArray(tmp_array.shape,tmp_array)
 
     def __setitem__(self, key, value):
         if self.item_is_element(key):
+            # 直接对值及进行赋值
+            # 在DepTensor中应该不会遇到
             self._ndarray[key].set(value)
         else:
             if isinstance(value, ConductArray):
                 # 遍历改指针
-                self.vec_set_from_proxy(self._ndarray, value._ndarray)
+                self.vec_set_from_proxy(self._ndarray[key], value._ndarray)
             if isinstance(value, np.ndarray):
                 # 遍历赋值 value是一个array
-                self.vec_set_from_value(self._ndarray, value)
+                self.vec_set_from_value(self._ndarray[key], value)
             else:
-                self.vec_set_from_value(self._ndarray, value)
-                # 遍历赋值 value是单个值
+                # 遍历赋值 value是单个值 借助np.vectorize 实现
+                self.vec_set_from_value(self._ndarray[key], value)
+
 
     def reshape(self, shape) -> ConductArray:
         new_ndarray = self._ndarray.reshape(shape)
