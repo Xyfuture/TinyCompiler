@@ -159,10 +159,12 @@ def _conv2d_kernel(input_feature_map: DepTensor,
 
                     # TODO get partial window
 
+                    current_input = get_xbar_group_input(current_input_window, start_index,
+                                                         weight_matrix.xbar_group_array[xbar_i])
+
                     partial_sum_list.append(
                         _xbar_vec_mul_kernel(
-                            get_xbar_group_input(current_input_window, start_index,
-                                                 weight_matrix.xbar_group_array[xbar_i]),
+                            current_input,
                             weight_matrix.xbar_group_array[xbar_i]
                         )
                     )
