@@ -10,7 +10,7 @@ from TinyGraph.ConductArray import ConductArray
 from TinyGraph.Graph import MicroGraph, MicroOp, MicroNode
 
 from TinyGraph.DSL import MatrixVar, XbarGroupVar, DepTensor
-from TinyGraph.Ops import AddOp, TransferOp, MatVecMulOp, MaxPool2dOp
+from TinyGraph.Ops import AddOp, TransferOp, MatVecMulOp, MaxPool2dOp, ReLUOp
 
 
 def _make_data_to_core_kernel(src: DepTensor, core_id: int) -> DepTensor:
@@ -19,8 +19,9 @@ def _make_data_to_core_kernel(src: DepTensor, core_id: int) -> DepTensor:
             continue
         else:
             trans_op = TransferOp(position, core_id, src.reduced_dim_size)
-            input_nodes = [src.tensor_op[index].node]
-            MicroGraph.current_graph.create_node(input_nodes, trans_op)
+            input_node = src.tensor_op[index].node
+            trans_node = MicroGraph.current_graph.create_node([], trans_op)
+            input_node.insert_node_after_with(trans_node)
 
             src[index] = (trans_op, core_id)
 
@@ -36,7 +37,7 @@ def _add_same_core_kernel(in_1: DepTensor, in_2: DepTensor) -> DepTensor:
         dim_size = in_1.reduced_dim_size
         add_op = AddOp(core_id, dim_size)
         input_nodes = [in_1.tensor_op[index].node, in_2.tensor_op[index].node]
-
+        # TODO 使用insert after 这是两个node情况
         MicroGraph.current_graph.create_node(input_nodes, add_op)
 
         out_dep_tensor.tensor_op[index] = add_op
@@ -251,3 +252,17 @@ def _matrix_vec_mul_kernel(input_tensor: DepTensor,
         current_output = _sum_kernel(partial_sum_list)
 
     return current_output
+
+
+def _relu_kernel(input_tensor: DepTensor) -> DepTensor:
+    output_tensor = DepTensor(input_tensor.shape, input_tensor.reduced_dim_size)
+
+    for index, position in input_tensor.tensor_position.enum():
+        relu_op = ReLUOp(position)
+        pre_node: MicroNode = input_tensor.tensor_op[index].node
+        relu_node = MicroGraph.current_graph.create_node([], relu_op)
+        pre_node.insert_node_after_with(relu_node)
+
+        output_tensor[index] = (relu_op, position)
+
+    return output_tensor

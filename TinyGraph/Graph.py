@@ -43,11 +43,8 @@ class MicroNode:
                 skipped.append(node)
                 continue
 
-            new_input_nodes = node._input_nodes
-            new_input_nodes.pop(self)
-            new_input_nodes.setdefault(replace_with)
-
-            node.__update_input_nodes(list(new_input_nodes))
+            node.__remove_input_nodes(self)
+            node.__add_input_nodes(replace_with)
 
         return [node for node in to_process if node not in skipped]
 
@@ -82,6 +79,21 @@ class MicroNode:
         for new_input_node in new_input_nodes:
             self._input_nodes.setdefault(new_input_node)
             new_input_node._output_nodes.setdefault(self)
+
+    def __remove_input_nodes(self,to_remove:MicroNode):
+        to_remove._output_nodes.pop(self)
+        self._input_nodes.pop(to_remove)
+
+    def __add_input_nodes(self,to_add:MicroNode):
+        to_add._output_nodes.setdefault(self)
+        self._input_nodes.setdefault(to_add)
+
+    def check_connection(self):
+        for node in self._input_nodes:
+            assert self in node._output_nodes
+
+        for node in self._output_nodes:
+            assert self in node._input_nodes
 
 
 class MicroGraph:
@@ -133,10 +145,10 @@ class _NodeCreate:
 
         self._sequential_last_node: List[Optional[MicroNode]] = []
 
-        self.create_func_stack: List[Tuple[Callable,str]] = [(self.simple_create_node,'simple')]
+        self.create_func_stack: List[Tuple[Callable, str]] = [(self.simple_create_node, 'simple')]
 
         self._current_create_func: Callable[[List[MicroNode], MicroOp], MicroNode] = self.simple_create_node
-        self._current_create_func_name:str = 'simple'
+        self._current_create_func_name: str = 'simple'
 
         self._next_create_func_name: str = ""
 
@@ -159,7 +171,7 @@ class _NodeCreate:
     def set_graph_creator_in_context(self, creator_name: str):
         self._next_create_func_name = creator_name
 
-    def get_create_func_by_name(self,create_func_name:str) -> Callable:
+    def get_create_func_by_name(self, create_func_name: str) -> Callable:
         if create_func_name == "simple":
             return self.simple_create_node
         elif create_func_name == 'sequential':
@@ -168,7 +180,7 @@ class _NodeCreate:
     def __enter__(self):
         self._current_create_func_name = self._next_create_func_name
         self._current_create_func = self.get_create_func_by_name(self._next_create_func_name)
-        self.create_func_stack.append((self._current_create_func,self._current_create_func_name))
+        self.create_func_stack.append((self._current_create_func, self._current_create_func_name))
 
         if self._current_create_func_name == 'sequential':
             self._sequential_last_node.append(None)
@@ -178,7 +190,7 @@ class _NodeCreate:
             self._sequential_last_node.pop()
 
         self.create_func_stack.pop()
-        self._current_create_func,self._current_create_func_name = self.create_func_stack[-1]
+        self._current_create_func, self._current_create_func_name = self.create_func_stack[-1]
 
         self._next_create_func_name = None
 

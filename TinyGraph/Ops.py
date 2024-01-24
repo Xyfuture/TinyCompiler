@@ -60,3 +60,12 @@ class PadOp(MicroOp):
 
     def code_gen(self):
         pass
+
+
+class ReLUOp(MicroOp):
+    def __init__(self,core_id:int):
+        super().__init__()
+        self.core_id = core_id
+
+    def code_gen(self):
+        pass

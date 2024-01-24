@@ -11,24 +11,29 @@ graph = MicroGraph()
 MicroGraph.current_graph = graph
 
 conv2d_1 = DepConv2d(0, in_channels=3, out_channels=32, kernel_size=(3, 3), stride=(1, 1), padding=1)
-conv2d_2 = DepConv2d(0,in_channels=32,out_channels=64,kernel_size=(3,3),stride=(1,1),padding=1)
+conv2d_2 = DepConv2d(0, in_channels=32, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
 pad_op = PadOp(0)
 MicroGraph.current_graph.create_node([], pad_op)
 
-input_tensor = DepTensor((32, 32), 3,
-                         ConductArray.full((32, 32), pad_op),
-                         ConductArray.full((32, 32), 0))
+input_shape = (32, 32)
+input_tensor = DepTensor(input_shape, 3,
+                         ConductArray.full(input_shape, pad_op),
+                         ConductArray.full(input_shape, 0))
 
 output_tensor = conv2d_1.forward(input_tensor)
 output_tensor_2 = conv2d_2.forward(output_tensor)
 
-output_tensor_3 = _add_kernel(output_tensor,output_tensor_2)
-
-output_tensor_4 = _maxpool2d_kernel(output_tensor_3,(2,2),(2,2),0)
+output_tensor_3 = _add_kernel(output_tensor, output_tensor_2)
+#
+output_tensor_4 = _maxpool2d_kernel(output_tensor_3, (2, 2), (2, 2), 0)
 print(output_tensor_4.shape)
 
 print(len(graph.nodes))
+
+# for node in graph.nodes:
+#     node.check_connection()
+
 node_list = topo_sort(graph)
 
 print(len(node_list))
@@ -38,7 +43,7 @@ count_map = {
     "transfer": 0,
     "add": 0,
     "pad": 0,
-    "maxpool":0
+    "maxpool": 0
 }
 
 for node in node_list:
@@ -50,7 +55,7 @@ for node in node_list:
         count_map['add'] += 1
     elif isinstance(node.micro_op, PadOp):
         count_map['pad'] += 1
-    elif isinstance(node.micro_op,MaxPool2dOp):
+    elif isinstance(node.micro_op, MaxPool2dOp):
         count_map['maxpool'] += 1
 
 for k, v in count_map.items():

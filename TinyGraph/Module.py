@@ -4,7 +4,7 @@ from typing import Tuple
 import numpy as np
 
 from TinyGraph.DSL import MatrixVar, DepTensor
-from TinyGraph.Kernel import _conv2d_kernel, _maxpool2d_kernel, _matrix_vec_mul_kernel, _add_kernel
+from TinyGraph.Kernel import _conv2d_kernel, _maxpool2d_kernel, _matrix_vec_mul_kernel, _add_kernel, _relu_kernel
 
 
 class DepModule:
@@ -16,7 +16,6 @@ class DepModule:
 
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
-
 
 
 class DepConv2d(DepModule):
@@ -91,4 +90,14 @@ class DepElementAdd(DepModule):
         in_b = copy.deepcopy(b)
 
         output_tensor = _add_kernel(in_a, in_b)
+        return output_tensor
+
+
+class DepReLU(DepModule):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, input_tensor, *args, **kwargs):
+        local_input_tensor = copy.deepcopy(input_tensor)
+        output_tensor = _relu_kernel(local_input_tensor)
         return output_tensor
