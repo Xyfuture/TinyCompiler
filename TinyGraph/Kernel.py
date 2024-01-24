@@ -5,8 +5,8 @@ from math import floor
 from typing import Tuple, List, Dict
 
 import numpy as np
-from torch.nn import MaxPool2d
 
+from TinyGraph.ConductArray import ConductArray
 from TinyGraph.Graph import MicroGraph, MicroOp, MicroNode
 
 from TinyGraph.DSL import MatrixVar, XbarGroupVar, DepTensor
@@ -14,7 +14,7 @@ from TinyGraph.Ops import AddOp, TransferOp, MatVecMulOp, MaxPool2dOp
 
 
 def _make_data_to_core_kernel(src: DepTensor, core_id: int) -> DepTensor:
-    for index, position in np.ndenumerate(src.tensor_position):
+    for index, position in src.tensor_position.enum():
         if position == core_id:
             continue
         else:
@@ -50,7 +50,7 @@ def _add_kernel(in_1: DepTensor, in_2: DepTensor) -> DepTensor:
 
     output_dep_tensor = DepTensor(in_1.tensor_shape, in_1.reduced_dim_size)
 
-    for index, position in np.ndenumerate(in_1.tensor_position):
+    for index, position in in_1.tensor_position.enum():
         tmp_1 = _make_data_to_core_kernel(in_1[index], dst_core_id)
         tmp_2 = _make_data_to_core_kernel(in_2[index], dst_core_id)
 
@@ -82,7 +82,7 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> Dep
 
     input_nodes: List[MicroNode] = []
     op: MicroOp
-    for op in input_vec.tensor_op.flat:
+    for op in input_vec.tensor_op.flat():
         # check op is not None or 0
         if op:
             input_nodes.append(op.node)
@@ -91,8 +91,8 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> Dep
     MicroGraph.current_graph.create_node(input_nodes, mat_vec_mul_op)
 
     output_tensor = DepTensor((1,), xbar_matrix.xbar_group_shape[1],
-                              np.full(1, mat_vec_mul_op, dtype=object),
-                              np.full(1, core_id))
+                              ConductArray.full((1,), mat_vec_mul_op),
+                              ConductArray.full((1,), core_id))
     return output_tensor
 
 
@@ -214,7 +214,7 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
 
                 maxpool2d_op = MaxPool2dOp(core_id, kernel_size, vector_size)
                 input_nodes = [
-                    op.node for op in np.nditer(current_input_window.tensor_op)
+                    op.node for op in current_input_window.tensor_op.flat()
                 ]
                 MicroGraph.current_graph.create_node(input_nodes, maxpool2d_op)
 

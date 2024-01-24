@@ -137,7 +137,7 @@ class DepTensor:
         return zip(self.tensor_op.flat(), self.tensor_position.flat())
 
     def move_to(self, core_id: int):
-        for index, position in np.ndenumerate(self.tensor_position):
+        for index, position in self.tensor_position.enum():
             if position == core_id:
                 continue
             else:

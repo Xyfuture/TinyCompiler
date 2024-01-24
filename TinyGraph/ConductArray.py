@@ -15,6 +15,9 @@ class ObjectProxy:
     def get(self):
         return self.ptr
 
+    def __repr__(self):
+        return f"<Proxy:{self.ptr}>"
+
 
 def set_object_proxy_from_proxy(a: ObjectProxy, b: ObjectProxy):
     a.ptr = b.ptr
@@ -24,8 +27,16 @@ def set_object_proxy_from_value(a: ObjectProxy, b):
     a.ptr = b
 
 
+def set_object_proxy(a: ObjectProxy, b:Union[ObjectProxy,object]):
+    # 根据b数组的值修改a数组的值,把前面两个函数合起来,效率略低
+    if isinstance(b,ObjectProxy):
+        a.ptr = b.ptr
+    else:
+        a.ptr = b
+
 def make_object_proxy(a):
-    if isinstance(a,ObjectProxy):
+    # 返回一个新的array
+    if isinstance(a, ObjectProxy):
         return a
     else:
         return ObjectProxy(a)
@@ -34,6 +45,7 @@ def make_object_proxy(a):
 class ConductArray:
     vec_set_from_proxy = np.vectorize(set_object_proxy_from_proxy)
     vec_set_from_value = np.vectorize(set_object_proxy_from_value)
+    vec_set_proxy = np.vectorize(set_object_proxy)
     vec_make_proxy = np.vectorize(make_object_proxy)
     vec_proxy_ctor = np.vectorize(ObjectProxy)
 
@@ -42,11 +54,11 @@ class ConductArray:
         if isinstance(array_value, np.ndarray):
             # 这个ndarray 内部必须放的是 object proxy
             # 减少复制的情况
-            self._ndarray= array_value[:]
+            self._ndarray = array_value[:]
         else:
             # 其他情况,实现full的功能
-            self._ndarray = np.zeros(shape, dtype=object)
-            self._ndarray[:] = self.vec_proxy_ctor(array_value)
+            # self._ndarray = np.zeros(shape, array_value,dtype=object)
+            self._ndarray = self.vec_proxy_ctor(np.full(shape, array_value, dtype=object))
 
         self.shape = self._ndarray.shape
 
@@ -54,7 +66,7 @@ class ConductArray:
     def full(shape: Tuple[int, ...], value):
         return ConductArray(shape, value)
 
-    def item_is_element(self,item: Tuple):
+    def item_is_element(self, item: Tuple):
         # if isinstance(item, tuple):
         #     if not any(isinstance(x, slice) for x in item):
         #         return True
@@ -62,7 +74,7 @@ class ConductArray:
         #     return True
         #
         # return False
-        if isinstance(self._ndarray[item],np.ndarray):
+        if isinstance(self._ndarray[item], np.ndarray):
             return False
         return True
 
@@ -72,7 +84,7 @@ class ConductArray:
             # 单个值 在DepTensor中应该不会遇到
             return self._ndarray[item].get()
         tmp_array = self._ndarray[item]
-        return ConductArray(tmp_array.shape,tmp_array)
+        return ConductArray(tmp_array.shape, tmp_array)
 
     def __setitem__(self, key, value):
         if self.item_is_element(key):
@@ -83,13 +95,12 @@ class ConductArray:
             if isinstance(value, ConductArray):
                 # 遍历改指针
                 self.vec_set_from_proxy(self._ndarray[key], value._ndarray)
-            if isinstance(value, np.ndarray):
+            elif isinstance(value, np.ndarray):
                 # 遍历赋值 value是一个array
                 self.vec_set_from_value(self._ndarray[key], value)
             else:
                 # 遍历赋值 value是单个值 借助np.vectorize 实现
                 self.vec_set_from_value(self._ndarray[key], value)
-
 
     def reshape(self, shape) -> ConductArray:
         new_ndarray = self._ndarray.reshape(shape)
@@ -104,7 +115,9 @@ class ConductArray:
 
     @staticmethod
     def pad(array: ConductArray, pad_width: int, pad_value) -> ConductArray:
-        pad_array = np.pad(array._ndarray, pad_width,constant_values=pad_value)
+        pad_array = np.pad(array._ndarray, pad_width, constant_values=pad_value)
         pad_array = ConductArray.vec_make_proxy(pad_array)
-        return ConductArray(pad_array.shape,pad_array)
+        return ConductArray(pad_array.shape, pad_array)
 
+    def __repr__(self):
+        return f"ConductArray(\n{self._ndarray})"
