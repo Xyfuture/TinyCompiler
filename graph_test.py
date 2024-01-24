@@ -1,6 +1,7 @@
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
+from TinyGraph.Kernel import _add_kernel
 from TinyGraph.Module import DepConv2d
 import numpy as np
 
@@ -21,6 +22,8 @@ input_tensor = DepTensor((32, 32), 3,
 
 output_tensor = conv2d_1.forward(input_tensor)
 output_tensor_2 = conv2d_2.forward(output_tensor)
+
+output_tensor_3 = _add_kernel(output_tensor,output_tensor_2)
 
 print(output_tensor_2.shape)
 

@@ -46,7 +46,7 @@ def _add_same_core_kernel(in_1: DepTensor, in_2: DepTensor) -> DepTensor:
 
 
 def _add_kernel(in_1: DepTensor, in_2: DepTensor) -> DepTensor:
-    dst_core_id = in_1.tensor_position[0]
+    dst_core_id = in_1.tensor_position.flat()[0]
 
     output_dep_tensor = DepTensor(in_1.tensor_shape, in_1.reduced_dim_size)
 
@@ -138,8 +138,8 @@ def _conv2d_kernel(input_feature_map: DepTensor,
 
     for xbar_group in weight_matrix.xbar_group_array:
         if xbar_group.core_id not in core_input_tensor_map:
-            core_input_tensor_map[xbar_group.core_id] = copy.copy(pad_input_tensor)
-            # core_input_tensor_map[xbar_group.core_id] = copy.deepcopy(pad_input_tensor)
+            # core_input_tensor_map[xbar_group.core_id] = copy.copy(pad_input_tensor)
+            core_input_tensor_map[xbar_group.core_id] = copy.deepcopy(pad_input_tensor)
 
     with MicroGraph.current_graph.use_sequential_node_dep():
         for i in range(rows):

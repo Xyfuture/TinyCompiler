@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 from typing import Tuple, Optional, Union
 
 import numpy as np
@@ -19,22 +20,23 @@ class ObjectProxy:
         return f"<Proxy:{self.ptr}>"
 
 
-def set_object_proxy_from_proxy(a: ObjectProxy, b: ObjectProxy):
+def set_object_proxy_from_proxy(a: ObjectProxy, b: ObjectProxy) -> None:
     a.ptr = b.ptr
 
 
-def set_object_proxy_from_value(a: ObjectProxy, b):
+def set_object_proxy_from_value(a: ObjectProxy, b) -> None:
     a.ptr = b
 
 
-def set_object_proxy(a: ObjectProxy, b:Union[ObjectProxy,object]):
+def set_object_proxy(a: ObjectProxy, b: Union[ObjectProxy, object]) -> None:
     # 根据b数组的值修改a数组的值,把前面两个函数合起来,效率略低
-    if isinstance(b,ObjectProxy):
+    if isinstance(b, ObjectProxy):
         a.ptr = b.ptr
     else:
         a.ptr = b
 
-def make_object_proxy(a):
+
+def make_object_proxy(a) -> ObjectProxy:
     # 返回一个新的array
     if isinstance(a, ObjectProxy):
         return a
@@ -67,13 +69,6 @@ class ConductArray:
         return ConductArray(shape, value)
 
     def item_is_element(self, item: Tuple):
-        # if isinstance(item, tuple):
-        #     if not any(isinstance(x, slice) for x in item):
-        #         return True
-        # elif isinstance(item, int):
-        #     return True
-        #
-        # return False
         if isinstance(self._ndarray[item], np.ndarray):
             return False
         return True
@@ -121,3 +116,9 @@ class ConductArray:
 
     def __repr__(self):
         return f"ConductArray(\n{self._ndarray})"
+
+    def __deepcopy__(self, memodict={}):
+        new_ndarray = self.vec_proxy_ctor(np.full(self.shape, None, dtype=object))
+        self.vec_set_from_proxy(new_ndarray, self._ndarray)
+
+        return self.__class__(copy.deepcopy(self.shape), new_ndarray)
