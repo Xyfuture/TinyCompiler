@@ -195,7 +195,7 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
     pad_input_tensor = DepTensor.pad(input_feature_map, padding)
     pad_shape = pad_input_tensor.shape
 
-    output_shape = (
+    output_shape = tuple(
         (pad_shape[i] - kernel_size[i]) // stride[i] + 1 for i in range(len(kernel_size))
     )
 

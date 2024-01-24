@@ -1,11 +1,11 @@
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
-from TinyGraph.Kernel import _add_kernel
+from TinyGraph.Kernel import _add_kernel, _maxpool2d_kernel
 from TinyGraph.Module import DepConv2d
 import numpy as np
 
-from TinyGraph.Ops import PadOp, MatVecMulOp, TransferOp, AddOp
+from TinyGraph.Ops import PadOp, MatVecMulOp, TransferOp, AddOp, MaxPool2dOp
 
 graph = MicroGraph()
 MicroGraph.current_graph = graph
@@ -25,7 +25,8 @@ output_tensor_2 = conv2d_2.forward(output_tensor)
 
 output_tensor_3 = _add_kernel(output_tensor,output_tensor_2)
 
-print(output_tensor_2.shape)
+output_tensor_4 = _maxpool2d_kernel(output_tensor_3,(2,2),(2,2),0)
+print(output_tensor_4.shape)
 
 print(len(graph.nodes))
 node_list = topo_sort(graph)
@@ -36,7 +37,8 @@ count_map = {
     "mat_vec_mul": 0,
     "transfer": 0,
     "add": 0,
-    "pad": 0
+    "pad": 0,
+    "maxpool":0
 }
 
 for node in node_list:
@@ -48,6 +50,8 @@ for node in node_list:
         count_map['add'] += 1
     elif isinstance(node.micro_op, PadOp):
         count_map['pad'] += 1
+    elif isinstance(node.micro_op,MaxPool2dOp):
+        count_map['maxpool'] += 1
 
 for k, v in count_map.items():
     print(f'{k} count: {v}')

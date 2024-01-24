@@ -1,9 +1,10 @@
+import copy
 from typing import Tuple
 
 import numpy as np
 
 from TinyGraph.DSL import MatrixVar, DepTensor
-from TinyGraph.Kernel import _conv2d_kernel
+from TinyGraph.Kernel import _conv2d_kernel, _maxpool2d_kernel, _matrix_vec_mul_kernel, _add_kernel
 
 
 class DepModule:
@@ -12,6 +13,10 @@ class DepModule:
 
     def forward(self, *args, **kwargs):
         pass
+
+    def __call__(self, *args, **kwargs):
+        return self.forward(*args, **kwargs)
+
 
 
 class DepConv2d(DepModule):
@@ -48,7 +53,14 @@ class DepMaxpool2d(DepModule):
         self.padding = padding
 
     def forward(self, input_tensor: DepTensor):
-        pass
+        local_input_tensor = copy.deepcopy(input_tensor)
+
+        output_tensor = _maxpool2d_kernel(local_input_tensor,
+                                          self.kernel_size,
+                                          self.stride,
+                                          self.padding)
+
+        return output_tensor
 
 
 class DepLinear(DepModule):
@@ -58,11 +70,25 @@ class DepLinear(DepModule):
         self.out_features = out_features
         self.bias = bias
 
+        self.weight_matrix_shape = (in_features, out_features)
+        self.weight_matrix = MatrixVar(self.weight_matrix_shape, )
+        self.weight_matrix.dummy_mapping()
+
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
-        pass
+        local_input_tensor = copy.deepcopy(input_tensor)
+
+        output_tensor = _matrix_vec_mul_kernel(local_input_tensor, self.weight_matrix)
+
+        return output_tensor
 
 
 class DepElementAdd(DepModule):
     def __init__(self):
         super().__init__()
-        pass
+
+    def forward(self, a, b, *args, **kwargs):
+        in_a = copy.deepcopy(a)
+        in_b = copy.deepcopy(b)
+
+        output_tensor = _add_kernel(in_a, in_b)
+        return output_tensor
