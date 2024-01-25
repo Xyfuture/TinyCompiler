@@ -6,8 +6,13 @@ import numpy as np
 
 
 class MicroOp:
+    id_counter = {}
+
     def __init__(self):
         self.node: Optional[MicroNode] = None
+
+        self.op_id = MicroOp.id_counter.get(self.__class__,1)
+        MicroOp.id_counter[self.__class__] = self.op_id + 1
 
         # self.output_dep_tensor:Optional[DepTensor] = None
 
@@ -16,6 +21,15 @@ class MicroOp:
 
     def code_gen(self):
         pass
+
+    def dummy_code_gen(self):
+        pass
+
+    def __repr__(self):
+        return f"MicroOp"
+
+    def full_info(self):
+        return ""
 
 
 class MicroNode:
@@ -43,28 +57,18 @@ class MicroNode:
                 skipped.append(node)
                 continue
 
-            node.__remove_input_nodes(self)
-            node.__add_input_nodes(replace_with)
+            node.__remove_input_node(self)
+            node.__add_input_node(replace_with)
 
         return [node for node in to_process if node not in skipped]
 
     def insert_node_after_with(self, append_with: MicroNode):
         self.replace_all_uses_with(append_with, delete_user_cb=lambda node: True if node is not append_with else False)
-        append_with.__update_input_nodes([self])
-
-    def insert_node_before_with(self, prepend_with: MicroNode):
-        input_nodes = self._input_nodes
-        self.__update_input_nodes([prepend_with])
-
-        prepend_with.__update_input_nodes(list(input_nodes))
+        append_with.__add_input_node(self)
 
     def replace_input_with(self, old_input: MicroNode, new_input: MicroNode):
-        new_input_nodes = self._input_nodes
-
-        new_input_nodes.pop(old_input)
-        new_input_nodes.setdefault(new_input)
-
-        self.__update_input_nodes(list(new_input_nodes))
+        self.__remove_input_node(old_input)
+        self.__add_input_node(new_input)
 
     def __update_input_nodes(self, new_input_nodes: List[MicroNode]):
         """
@@ -80,11 +84,15 @@ class MicroNode:
             self._input_nodes.setdefault(new_input_node)
             new_input_node._output_nodes.setdefault(self)
 
-    def __remove_input_nodes(self,to_remove:MicroNode):
+    def add_input_nodes(self, nodes: List[MicroNode]):
+        for node in nodes:
+            self.__add_input_node(node)
+
+    def __remove_input_node(self, to_remove: MicroNode):
         to_remove._output_nodes.pop(self)
         self._input_nodes.pop(to_remove)
 
-    def __add_input_nodes(self,to_add:MicroNode):
+    def __add_input_node(self, to_add: MicroNode):
         to_add._output_nodes.setdefault(self)
         self._input_nodes.setdefault(to_add)
 

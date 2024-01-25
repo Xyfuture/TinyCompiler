@@ -141,8 +141,9 @@ class DepTensor:
             if position == core_id:
                 continue
             else:
-                trans_op = TransferOp(position, core_id, self.reduced_dim_size)
-                input_nodes = [self.tensor_op[index].node]
+                input_op =  self.tensor_op[index]
+                trans_op = TransferOp(position, core_id, self.reduced_dim_size,input_op)
+                input_nodes = [input_op.node]
 
                 MicroGraph.current_graph.create_node(input_nodes, trans_op)
 

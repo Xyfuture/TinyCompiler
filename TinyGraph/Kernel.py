@@ -18,8 +18,9 @@ def _make_data_to_core_kernel(src: DepTensor, core_id: int) -> DepTensor:
         if position == core_id:
             continue
         else:
-            trans_op = TransferOp(position, core_id, src.reduced_dim_size)
-            input_node = src.tensor_op[index].node
+            src_op = src.tensor_op[index]
+            trans_op = TransferOp(position, core_id, src.reduced_dim_size, src_op)
+            input_node = src_op.node
             trans_node = MicroGraph.current_graph.create_node([], trans_op)
             input_node.insert_node_after_with(trans_node)
 
@@ -35,9 +36,11 @@ def _add_same_core_kernel(in_1: DepTensor, in_2: DepTensor) -> DepTensor:
     for index in np.ndindex(in_1.tensor_position.shape):
         core_id = in_1.tensor_position[index]
         dim_size = in_1.reduced_dim_size
-        add_op = AddOp(core_id, dim_size)
+        src_op = [in_1.tensor_op[index], in_2.tensor_op[index]]
+        add_op = AddOp(core_id, dim_size, src_op[0], src_op[1])
+
         input_nodes = [in_1.tensor_op[index].node, in_2.tensor_op[index].node]
-        # TODO 使用insert after 这是两个node情况
+
         MicroGraph.current_graph.create_node(input_nodes, add_op)
 
         out_dep_tensor.tensor_op[index] = add_op
@@ -81,14 +84,15 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> Dep
     # check input size and matrix rows
     assert vec_size == xbar_matrix.xbar_group_shape[0]
 
-    input_nodes: List[MicroNode] = []
-    op: MicroOp
+    input_ops:List[MicroOp] = []
     for op in input_vec.tensor_op.flat():
-        # check op is not None or 0
         if op:
-            input_nodes.append(op.node)
+            input_ops.append(op)
 
-    mat_vec_mul_op = MatVecMulOp(core_id, xbar_matrix.xbar_group_id, vec_size, xbar_matrix.xbar_group_shape[1], )
+    input_nodes = [op.node for op in input_ops]
+
+    mat_vec_mul_op = MatVecMulOp(core_id, xbar_matrix.xbar_group_id, vec_size, xbar_matrix.xbar_group_shape[1],
+                                 input_ops)
     MicroGraph.current_graph.create_node(input_nodes, mat_vec_mul_op)
 
     output_tensor = DepTensor((1,), xbar_matrix.xbar_group_shape[1],
@@ -212,11 +216,11 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
                                        i * stride[0]:i * stride[0] + kernel_size[0],
                                        j * stride[1]:j * stride[1] + kernel_size[1]
                                        ].move_to(core_id)
+                input_ops = [op for op in current_input_window.tensor_op.flat()]
 
-                maxpool2d_op = MaxPool2dOp(core_id, kernel_size, vector_size)
-                input_nodes = [
-                    op.node for op in current_input_window.tensor_op.flat()
-                ]
+                maxpool2d_op = MaxPool2dOp(core_id, kernel_size, vector_size,input_ops)
+
+                input_nodes = [op.node for op in input_ops]
                 MicroGraph.current_graph.create_node(input_nodes, maxpool2d_op)
 
                 output_feature_map[i, j] = (maxpool2d_op, core_id)
@@ -258,10 +262,10 @@ def _relu_kernel(input_tensor: DepTensor) -> DepTensor:
     output_tensor = DepTensor(input_tensor.shape, input_tensor.reduced_dim_size)
 
     for index, position in input_tensor.tensor_position.enum():
-        relu_op = ReLUOp(position)
-        pre_node: MicroNode = input_tensor.tensor_op[index].node
-        relu_node = MicroGraph.current_graph.create_node([], relu_op)
-        pre_node.insert_node_after_with(relu_node)
+        pre_op:MicroOp = input_tensor.tensor_op[index]
+        relu_op = ReLUOp(position,pre_op)
+        pre_node: MicroNode = pre_op.node
+        MicroGraph.current_graph.create_node([pre_node], relu_op)
 
         output_tensor[index] = (relu_op, position)
 

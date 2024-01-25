@@ -20,9 +20,12 @@ class Core:
         Core.id_map[self.core_id] = self
 
         self.inst: List[MachineOp] = []
+        self.dummy_inst = []
 
     @classmethod
     def get_core_by_id(cls, core_id: int):
-        return cls.id_map[core_id]
+        if core_id>=1:
+            return cls.id_map[core_id]
+        return None
 
 
