@@ -14,7 +14,7 @@ class MicroOp:
         self.op_id = MicroOp.id_counter.get(self.__class__,1)
         MicroOp.id_counter[self.__class__] = self.op_id + 1
 
-        # self.output_dep_tensor:Optional[DepTensor] = None
+
 
     def register_node(self, node: MicroNode):
         self.node = node
@@ -44,6 +44,10 @@ class MicroNode:
 
         self._input_nodes: Dict[MicroNode, None] = {}
         self._output_nodes: Dict[MicroNode, None] = {}
+
+        # 使用双向链表管理
+        self._prev:Optional[MicroNode] = None
+        self._next:Optional[MicroNode] = None
 
         self.__update_input_nodes(input_nodes)
 
