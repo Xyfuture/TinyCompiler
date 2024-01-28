@@ -11,10 +11,8 @@ class MicroOp:
     def __init__(self):
         self.node: Optional[MicroNode] = None
 
-        self.op_id = MicroOp.id_counter.get(self.__class__,1)
+        self.op_id = MicroOp.id_counter.get(self.__class__, 1)
         MicroOp.id_counter[self.__class__] = self.op_id + 1
-
-
 
     def register_node(self, node: MicroNode):
         self.node = node
@@ -46,10 +44,44 @@ class MicroNode:
         self._output_nodes: Dict[MicroNode, None] = {}
 
         # 使用双向链表管理
-        self._prev:Optional[MicroNode] = None
-        self._next:Optional[MicroNode] = None
+        self._prev: MicroNode = self
+        self._next: MicroNode = self
+
+        self._erased = False
 
         self.__update_input_nodes(input_nodes)
+
+    @property
+    def next(self) -> MicroNode:
+        return self._next
+
+    @property
+    def prev(self) -> MicroNode:
+        return self._prev
+
+    def prepend(self, x: MicroNode):
+        if self == x:
+            return
+
+        x._remove_from_list()
+        p = self._prev
+        p._next, x._prev = x, p
+        x._next, self._prev = self, x
+
+    def append(self, x: MicroNode):
+        self._next.append(x)
+
+    def _remove_from_list(self):
+        p, n = self._prev, self.next
+        p._next, n._prev = n, p
+
+    @property
+    def all_input_nodes(self) -> List[MicroNode]:
+        return list(self._input_nodes)
+
+    @property
+    def all_output_nodes(self) -> List[MicroNode]:
+        return list(self._output_nodes)
 
     def replace_all_uses_with(self, replace_with: MicroNode,
                               delete_user_cb: Callable[[MicroNode], bool] = lambda user: True, ):
@@ -108,6 +140,38 @@ class MicroNode:
             assert self in node._input_nodes
 
 
+class _NodeList:
+    def __init__(self, graph: MicroGraph, direction: str = '_next'):
+        assert direction in ['_next', '_previous']
+        self.graph = graph
+        self.direction = direction
+
+    def __len__(self):
+        return self.graph._len
+
+    def __iter__(self):
+        root, direction = self.graph._root, self.direction
+        cur = getattr(root, direction)
+        while cur is not root:
+            yield cur
+            cur = getattr(cur, direction)
+
+    def __reversed__(self):
+        return _NodeList(self.graph, '_next' if self.direction == '_prev' else '_prev')
+
+
+class _InsertPoint:
+    def __init__(self, graph: MicroGraph, new_insert):
+        self.graph = graph
+        self.original_insert, self.new_insert = graph._insert, new_insert
+
+    def __enter__(self):
+        self.graph._insert = self.new_insert
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.graph._insert = self.original_insert
+
+
 class MicroGraph:
     """
     主要是维护一个偏序关系,不一定存在实际的输入输出关系,只是保证正常的顺序
@@ -116,18 +180,48 @@ class MicroGraph:
     current_graph: Optional[MicroGraph] = None
 
     def __init__(self):
-        self.nodes: List[MicroNode] = []
+        self._root: MicroNode = MicroNode(self, [], None)
+        self._insert = self._root.prepend
+        self._len = 0
 
         self._node_creator = _NodeCreate(self)
-
         self.create_node: Callable[[List[MicroNode], MicroOp], MicroNode] = self._node_creator.__call__
 
+    @property
+    def nodes(self) -> _NodeList:
+        return _NodeList(self)
+
+    def insert_before(self,node:Optional[MicroNode]=None):
+        if node is None:
+            return self.insert_after(self._root)
+
+        return _InsertPoint(self,node.prepend)
+
+    def insert_after(self,node:Optional[MicroNode]=None):
+        if node is None:
+            return self.insert_before(self._root)
+        return _InsertPoint(self,node.append)
+
     def add_node(self, node: MicroNode):
-        self.nodes.append(node)
+        self._insert(node)
+        self._len += 1
 
     def use_sequential_node_dep(self):
         self._node_creator.set_graph_creator_in_context('sequential')
         return self._node_creator
+
+    def erase_node(self, node: MicroNode):
+        # 确保没有其他节点使用该node
+        if len(node.all_output_nodes) > 0:
+            assert False
+
+        if node._erased:
+            return
+
+        node._remove_from_list()
+        node._erased = True
+        self._len -= 1
+        node._input_nodes = {}
 
 
 def topo_sort(graph: MicroGraph) -> List[MicroNode]:
