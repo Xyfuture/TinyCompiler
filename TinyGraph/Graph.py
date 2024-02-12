@@ -30,6 +30,11 @@ class MicroOp:
         return ""
 
 
+class RootOp(MicroOp):
+    def __init__(self):
+        super().__init__()
+
+
 class MicroNode:
     """
     生成核上的指令
@@ -180,7 +185,7 @@ class MicroGraph:
     current_graph: Optional[MicroGraph] = None
 
     def __init__(self):
-        self._root: MicroNode = MicroNode(self, [], None)
+        self._root: MicroNode = MicroNode(self, [], RootOp())
         self._insert = self._root.prepend
         self._len = 0
 
@@ -191,16 +196,16 @@ class MicroGraph:
     def nodes(self) -> _NodeList:
         return _NodeList(self)
 
-    def insert_before(self,node:Optional[MicroNode]=None):
+    def insert_before(self, node: Optional[MicroNode] = None):
         if node is None:
             return self.insert_after(self._root)
 
-        return _InsertPoint(self,node.prepend)
+        return _InsertPoint(self, node.prepend)
 
-    def insert_after(self,node:Optional[MicroNode]=None):
+    def insert_after(self, node: Optional[MicroNode] = None):
         if node is None:
             return self.insert_before(self._root)
-        return _InsertPoint(self,node.append)
+        return _InsertPoint(self, node.append)
 
     def add_node(self, node: MicroNode):
         self._insert(node)

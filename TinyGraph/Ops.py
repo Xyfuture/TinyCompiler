@@ -156,6 +156,11 @@ class ReLUOp(MicroOp):
         return f"ReLUOp-{self.op_id}"
 
 
+class RootOp(MicroOp):
+    def __init__(self):
+        super().__init__()
+
+
 def transfer_fusion(graph: MicroGraph):
     for node in graph.nodes:
         if isinstance(node.micro_op, TransferOp):

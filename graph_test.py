@@ -11,8 +11,8 @@ from TinyGraph.Ops import PadOp, MatVecMulOp, TransferOp, AddOp, MaxPool2dOp, tr
 graph = MicroGraph()
 MicroGraph.current_graph = graph
 
-conv2d_1 = DepConv2d(0, in_channels=3, out_channels=32, kernel_size=(3, 3), stride=(1, 1), padding=1)
-conv2d_2 = DepConv2d(0, in_channels=32, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
+conv2d_1 = DepConv2d( in_channels=3, out_channels=32, kernel_size=(3, 3), stride=(1, 1), padding=1)
+conv2d_2 = DepConv2d( in_channels=32, out_channels=64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
 pad_op = PadOp(0)
 MicroGraph.current_graph.create_node([], pad_op)
@@ -41,14 +41,14 @@ print(len(node_list))
 
 print("Code Gen")
 
-node:MicroNode
-for node in node_list:
-    node.micro_op.dummy_code_gen()
-
-for k,v in Core.id_map.items():
-    print(f"Core: {k}")
-    for inst in v.dummy_inst:
-        print(f"  {inst}")
+# node:MicroNode
+# for node in node_list:
+#     node.micro_op.dummy_code_gen()
+#
+# for k,v in Core.id_map.items():
+#     print(f"Core: {k}")
+#     for inst in v.dummy_inst:
+#         print(f"  {inst}")
 
 
 

@@ -1,5 +1,5 @@
 import copy
-from typing import Tuple
+from typing import Tuple, Dict
 
 import numpy as np
 
@@ -9,7 +9,7 @@ from TinyGraph.Kernel import _conv2d_kernel, _maxpool2d_kernel, _matrix_vec_mul_
 
 class DepModule:
     def __init__(self):
-        pass
+        self._module_dict: Dict[DepModule, None] = {}
 
     def forward(self, *args, **kwargs):
         pass
@@ -17,13 +17,24 @@ class DepModule:
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
 
+    def __setattr__(self, name, value):
+        if isinstance(value, DepModule):
+            self._module_dict.setdefault(value)
+        super().__setattr__(name, value)
+
+    def _add_module_dict(self, module):
+        self._module_dict.setdefault(module)
+
+    def mapping(self):
+        for module in self._module_dict:
+            module.mapping()
+
 
 class DepConv2d(DepModule):
-    def __init__(self, core_id: int, in_channels: int, out_channels: int, kernel_size: Tuple[int, int],
+    def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int],
                  stride: Tuple[int, int] = (1, 1),
                  padding: int = 0, bias: bool = True):
         super().__init__()
-        self.core_id = core_id
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -42,6 +53,11 @@ class DepConv2d(DepModule):
                                        self.in_channels, self.out_channels,
                                        self.kernel_size, self.stride, self.padding)
         return output_tensor
+
+    def mapping(self):
+        # do something
+
+        super().mapping()
 
 
 class DepMaxpool2d(DepModule):
@@ -80,6 +96,10 @@ class DepLinear(DepModule):
 
         return output_tensor
 
+    def mapping(self):
+        # do something here
+        super().mapping()
+
 
 class DepElementAdd(DepModule):
     def __init__(self):
@@ -101,3 +121,17 @@ class DepReLU(DepModule):
         local_input_tensor = copy.deepcopy(input_tensor)
         output_tensor = _relu_kernel(local_input_tensor)
         return output_tensor
+
+
+class DepSequential(DepModule):
+    def __init__(self, *args):
+        super().__init__()
+        self.layers = args
+        for layer in self.layers:
+            if isinstance(layer, DepModule):
+                self._add_module_dict(layer)
+
+    def forward(self, input_tensor: DepTensor):
+        for layer in self.layers:
+            input_tensor = layer(input_tensor)
+        return input_tensor

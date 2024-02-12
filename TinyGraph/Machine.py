@@ -1,5 +1,7 @@
-from __future__ import  annotations
-from typing import List, Dict
+from __future__ import annotations
+from typing import List, Dict, Tuple
+
+from pydantic import BaseModel
 
 
 class MachineOp:
@@ -8,6 +10,12 @@ class MachineOp:
         self.op_name = op_name
         self.args = args
         self.kwargs = kwargs
+
+
+class CoreConfig(BaseModel):
+    xbar_cell_bit: int = 2
+    xbar_size: Tuple[int, int] = (128, 128)
+    xbar_cnt: int = 8
 
 
 class Core:
@@ -24,8 +32,13 @@ class Core:
 
     @classmethod
     def get_core_by_id(cls, core_id: int):
-        if core_id>=1:
+        if core_id >= 1:
             return cls.id_map[core_id]
         return None
 
+
+class Chip:
+    # 基于 chip 去做资源分配
+    def __init__(self):
+        pass
 
