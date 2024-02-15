@@ -12,7 +12,7 @@ class AddOp(MicroOp):
 
         self.input_ops = [src_op_1, src_op_2]
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):
@@ -36,7 +36,7 @@ class TransferOp(MicroOp):
 
         self.src_op = src_op
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):
@@ -70,7 +70,7 @@ class MatVecMulOp(MicroOp):
         self.input_size = input_size
         self.output_size = output_size
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):
@@ -96,7 +96,7 @@ class MaxPool2dOp(MicroOp):
 
         self.src_op_list = src_op_list
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):
@@ -117,7 +117,7 @@ class PadOp(MicroOp):
 
         self.core_id = core_id
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):
@@ -141,7 +141,7 @@ class ReLUOp(MicroOp):
 
         self.src_op = src_op
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):

@@ -10,7 +10,7 @@ from TinyGraph.ConductArray import ConductArray
 from TinyGraph.Graph import MicroGraph, MicroOp, MicroNode
 
 from TinyGraph.DSL import MatrixVar, XbarGroupVar, DepTensor
-from TinyGraph.Ops import AddOp, TransferOp, MatVecMulOp, MaxPool2dOp, ReLUOp
+from TinyGraph.MicroOps import AddOp, TransferOp, MatVecMulOp, MaxPool2dOp, ReLUOp
 
 
 def _make_data_to_core_kernel(src: DepTensor, core_id: int) -> DepTensor:

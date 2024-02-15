@@ -17,7 +17,7 @@ class MicroOp:
     def register_node(self, node: MicroNode):
         self.node = node
 
-    def code_gen(self):
+    def machine_op_gen(self):
         pass
 
     def dummy_code_gen(self):

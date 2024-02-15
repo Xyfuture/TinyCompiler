@@ -46,7 +46,7 @@ class DepConv2d(DepModule):
         self.weight_matrix_shape = (in_channels * kernel_size[0] * kernel_size[1], out_channels)
 
         self.weight_matrix = MatrixVar(self.weight_matrix_shape, )
-        self.weight_matrix.dummy_mapping()
+        # self.weight_matrix.dummy_mapping()
 
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
         output_tensor = _conv2d_kernel(input_tensor, self.weight_matrix,
@@ -56,7 +56,7 @@ class DepConv2d(DepModule):
 
     def mapping(self):
         # do something
-
+        self.weight_matrix.mapping()
         super().mapping()
 
 
@@ -98,6 +98,7 @@ class DepLinear(DepModule):
 
     def mapping(self):
         # do something here
+        self.weight_matrix.mapping()
         super().mapping()
 
 

@@ -6,7 +6,7 @@ from TinyGraph.Machine import Core
 from TinyGraph.Module import DepConv2d
 import numpy as np
 
-from TinyGraph.Ops import PadOp, MatVecMulOp, TransferOp, AddOp, MaxPool2dOp, transfer_fusion
+from TinyGraph.MicroOps import PadOp, MatVecMulOp, TransferOp, AddOp, MaxPool2dOp, transfer_fusion
 
 graph = MicroGraph()
 MicroGraph.current_graph = graph

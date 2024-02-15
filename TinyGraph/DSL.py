@@ -1,18 +1,20 @@
 from __future__ import annotations
 
+from math import ceil
 from typing import Tuple, Optional, List
 
 import numpy as np
 
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.Graph import MicroGraph
-from TinyGraph.Machine import Core
-from TinyGraph.Ops import TransferOp, PadOp
+from TinyGraph.Machine import Core, Chip
+from TinyGraph.MicroOps import TransferOp, PadOp
 
 
 class XbarGroupVar:
-    def __init__(self, xbar_group_shape: Tuple[int, int], core_id: int):
+    def __init__(self, xbar_group_shape: Tuple[int, int], core_id: int, group_id: int):
         self.core_id: int = core_id
+        self.group_id = group_id
 
         self.xbar_group_id = 0
         self.xbar_array_count: int = 0
@@ -33,7 +35,33 @@ class MatrixVar:
         pass
 
     def mapping(self):
-        pass
+        chip_config = Chip.current_chip.chip_config
+        xbar_cell_bit = chip_config.core_config.xbar_cell_bit
+        xbar_size = chip_config.core_config.xbar_size
+        xbar_rows, xbar_cols = xbar_size
+        xbar_cnt_per_core = chip_config.core_config.xbar_cnt
+
+        matrix_rows, matrix_cols = self.matrix_shape
+
+        xbar_cnt_per_group = ceil((matrix_cols * 8 / xbar_cell_bit) / xbar_cols)
+        group_cnt = ceil(matrix_rows / xbar_rows)
+
+        total_xbar_cnt = xbar_cnt_per_group * group_cnt
+
+        if total_xbar_cnt < xbar_cnt_per_core:
+            # 假设每次都分配一个新的核
+            core = Chip.current_chip.get_unmapped_core()
+
+            group_sub_matrix_rows = xbar_rows
+            for i in range(group_cnt):
+                if xbar_rows * i > matrix_rows:
+                    group_sub_matrix_rows = matrix_rows - xbar_rows * i
+                group_id = core.assign_group(xbar_cnt_per_group)
+                xbar_group = XbarGroupVar((group_sub_matrix_rows, matrix_cols)
+                                          , core.core_id, group_id)
+                self.xbar_group_array.append(xbar_group)
+        else:
+            assert False
 
     def dummy_mapping(self):
         core = Core()
@@ -141,8 +169,8 @@ class DepTensor:
             if position == core_id:
                 continue
             else:
-                input_op =  self.tensor_op[index]
-                trans_op = TransferOp(position, core_id, self.reduced_dim_size,input_op)
+                input_op = self.tensor_op[index]
+                trans_op = TransferOp(position, core_id, self.reduced_dim_size, input_op)
                 input_nodes = [input_op.node]
 
                 MicroGraph.current_graph.create_node(input_nodes, trans_op)
@@ -166,8 +194,8 @@ class DepTensor:
             pad_op = PadOp(-1)
             MicroGraph.current_graph.create_node([], pad_op)
 
-            tensor_op = ConductArray.pad(input_tensor.tensor_op, pad_width,pad_op)
-            tensor_position = ConductArray.pad(input_tensor.tensor_position, pad_width,-1)
+            tensor_op = ConductArray.pad(input_tensor.tensor_op, pad_width, pad_op)
+            tensor_position = ConductArray.pad(input_tensor.tensor_position, pad_width, -1)
             shape = tensor_op.shape
             output = DepTensor(shape, input_tensor.reduced_dim_size, tensor_op, tensor_position)
         else:
