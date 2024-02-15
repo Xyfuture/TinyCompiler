@@ -22,8 +22,9 @@ class Core:
         Core.id_map[self.core_id] = self
 
         self.core_config = core_config
+        self.memory_allocator = MemoryAllocator(self.core_config.local_buffer_size) # 设置内存分配器
 
-        self.inst: List[MachineOp] = []
+        self.machine_op_list: List[MachineOp] = []
         self.dummy_inst = []
 
         self.xbar_mapping: Dict[int, int] = {}  # key: xbar id value: group id

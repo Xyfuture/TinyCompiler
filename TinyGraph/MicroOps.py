@@ -1,7 +1,10 @@
+from multiprocessing.managers import SharedMemoryManager
 from typing import List, Optional, Tuple
+from collections import OrderedDict
 
 from TinyGraph.Graph import MicroOp, MicroGraph
 from TinyGraph.Machine import Core
+from TinyGraph.MachineOps import MachineVectorOp, AddressManager, SharedAddressManager
 
 
 class AddOp(MicroOp):
@@ -28,11 +31,11 @@ class AddOp(MicroOp):
 
 
 class TransferOp(MicroOp):
-    def __init__(self, src_core_id: int, dst_core_id: int, data_size: int, src_op: MicroOp):
+    def __init__(self, src_core_id: int, dst_core_id: int, vector_size: int, src_op: MicroOp):
         super().__init__()
         self.src_core_id = src_core_id
         self.dst_core_id = dst_core_id
-        self.data_size = data_size
+        self.data_size = vector_size
 
         self.src_op = src_op
 
@@ -60,15 +63,17 @@ class TransferOp(MicroOp):
 
 class MatVecMulOp(MicroOp):
     def __init__(self, core_id: int, xbar_group_id: int, input_size: int, output_size: int,
-                 src_vec_op_list: Optional[List[MicroOp]] = None):
+                 src_op_list: Optional[List[MicroOp]] = None, **kwargs):
         super().__init__()
 
         self.core_id = core_id
         self.xbar_group_id = xbar_group_id
-        self.src_vec_op_list = src_vec_op_list
+        self.src_op_list = src_op_list
 
         self.input_size = input_size
         self.output_size = output_size
+
+        self.kwargs = kwargs
 
     def machine_op_gen(self):
         pass
@@ -82,12 +87,12 @@ class MatVecMulOp(MicroOp):
         return f"MatVecMulOp-{self.op_id}"
 
     def full_info(self):
-        return f"MatVecMulOp-{self.op_id} #src: {self.src_vec_op_list}"
+        return f"MatVecMulOp-{self.op_id} #src: {self.src_op_list}"
 
 
 class MaxPool2dOp(MicroOp):
     def __init__(self, core_id: int, kernel_size: Tuple[int, int], vector_size: int,
-                 src_op_list: List[MicroOp]):
+                 src_op_list: List[MicroOp], **kwargs):
         super().__init__()
         self.core_id = core_id
 
@@ -96,8 +101,29 @@ class MaxPool2dOp(MicroOp):
 
         self.src_op_list = src_op_list
 
+        self.kwargs = kwargs
+
     def machine_op_gen(self):
-        pass
+        core = Core.get_core_by_id(self.core_id)
+        assert self.kernel_size[0] * self.kernel_size[1] == len(self.src_op_list)
+        prev_machine_op = self.src_op_list[0].output_machine_op
+        for i in range(1, len(self.src_op_list)):
+            cur_micro_op = self.src_op_list[1]
+
+            input_ops = [prev_machine_op, cur_micro_op.output_machine_op]
+
+            if 'shr_addr_manager_id' in self.kwargs:
+                output_manager = SharedAddressManager.get_shr_addr_manager(
+                    self.kwargs['shr_addr_manager_id'],
+                    self.vector_size,
+                    core.memory_allocator
+                )
+            else:
+                output_manager = AddressManager(self.vector_size, core.memory_allocator)
+
+            self.output_machine_op = MachineVectorOp(self.core_id, 'vmax', input_ops, output_manager)
+
+            prev_machine_op = self.output_machine_op
 
     def dummy_code_gen(self):
         core = Core.get_core_by_id(self.core_id)
@@ -135,14 +161,30 @@ class PadOp(MicroOp):
 
 
 class ReLUOp(MicroOp):
-    def __init__(self, core_id: int, src_op: MicroOp):
+    def __init__(self, core_id: int, vector_size: int, src_op: MicroOp,**kwargs):
         super().__init__()
         self.core_id = core_id
+        self.vector_size = vector_size
 
         self.src_op = src_op
+        self.kwargs = kwargs
 
     def machine_op_gen(self):
-        pass
+        core = Core.get_core_by_id(self.core_id)
+        src_machine_op = self.src_op.output_machine_op
+        input_ops = [src_machine_op]
+
+        if 'shr_addr_manager_id' in self.kwargs:
+            output_manager = SharedAddressManager.get_shr_addr_manager(
+                self.kwargs['shr_addr_manager_id'],
+                self.vector_size,
+                core.memory_allocator
+            )
+        else:
+            output_manager = AddressManager(self.vector_size, core.memory_allocator)
+
+        self.output_machine_op = MachineVectorOp(self.core_id, 'relu', input_ops, output_manager)
+        core.machine_op_list.append(self.output_machine_op)
 
     def dummy_code_gen(self):
         core = Core.get_core_by_id(self.core_id)
