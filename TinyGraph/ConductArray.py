@@ -117,7 +117,7 @@ class ConductArray:
     def __repr__(self):
         return f"ConductArray(\n{self._ndarray})"
 
-    def __deepcopy__(self, memodict={}):
+    def __deepcopy__(self, memodict):
         new_ndarray = self.vec_proxy_ctor(np.full(self.shape, None, dtype=object))
         self.vec_set_from_proxy(new_ndarray, self._ndarray)
 

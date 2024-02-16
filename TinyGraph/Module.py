@@ -87,7 +87,7 @@ class DepLinear(DepModule):
 
         self.weight_matrix_shape = (in_features, out_features)
         self.weight_matrix = MatrixVar(self.weight_matrix_shape, )
-        self.weight_matrix.dummy_mapping()
+        # self.weight_matrix.dummy_mapping()
 
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
         local_input_tensor = copy.deepcopy(input_tensor)

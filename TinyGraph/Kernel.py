@@ -84,7 +84,7 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> Dep
     # check input size and matrix rows
     assert vec_size == xbar_matrix.xbar_group_shape[0]
 
-    input_ops:List[MicroOp] = []
+    input_ops: List[MicroOp] = []
     for op in input_vec.tensor_op.flat():
         if op:
             input_ops.append(op)
@@ -218,7 +218,7 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
                                        ].move_to(core_id)
                 input_ops = [op for op in current_input_window.tensor_op.flat()]
 
-                maxpool2d_op = MaxPool2dOp(core_id, kernel_size, vector_size,input_ops)
+                maxpool2d_op = MaxPool2dOp(core_id, kernel_size, vector_size, input_ops)
 
                 input_nodes = [op.node for op in input_ops]
                 MicroGraph.current_graph.create_node(input_nodes, maxpool2d_op)
@@ -262,8 +262,8 @@ def _relu_kernel(input_tensor: DepTensor) -> DepTensor:
     output_tensor = DepTensor(input_tensor.shape, input_tensor.reduced_dim_size)
 
     for index, position in input_tensor.tensor_position.enum():
-        pre_op:MicroOp = input_tensor.tensor_op[index]
-        relu_op = ReLUOp(position,pre_op)
+        pre_op: MicroOp = input_tensor.tensor_op[index]
+        relu_op = ReLUOp(position, pre_op)
         pre_node: MicroNode = pre_op.node
         MicroGraph.current_graph.create_node([pre_node], relu_op)
 

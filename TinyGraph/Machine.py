@@ -2,13 +2,12 @@ from __future__ import annotations
 from typing import List, Dict, Tuple, Optional
 from pydantic import BaseModel
 
-from TinyGraph.MachineOps import MachineOp
 
 
 class CoreConfig(BaseModel):
     xbar_cell_bit: int = 2
     xbar_size: Tuple[int, int] = (128, 128)
-    xbar_cnt: int = 8
+    xbar_cnt: int = 1024
     local_buffer_size: int = 64 * 1024  # 64KByte
 
 
@@ -24,6 +23,7 @@ class Core:
         self.core_config = core_config
         self.memory_allocator = MemoryAllocator(self.core_config.local_buffer_size)  # 设置内存分配器
 
+        from TinyGraph.MachineOps import MachineOp
         self.machine_op_list: List[MachineOp] = []
         self.dummy_inst = []
 
@@ -49,7 +49,7 @@ class Core:
 
 
 class ChipConfig(BaseModel):
-    core_cnt: int = 16
+    core_cnt: int = 128
     global_buffer_size: int = 1204 * 1024  # 1MByte
     dram_size: int = 1024 * 1024 * 1024
     core_config: CoreConfig = CoreConfig()
