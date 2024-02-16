@@ -22,7 +22,7 @@ class Core:
         Core.id_map[self.core_id] = self
 
         self.core_config = core_config
-        self.memory_allocator = MemoryAllocator(self.core_config.local_buffer_size) # 设置内存分配器
+        self.memory_allocator = MemoryAllocator(self.core_config.local_buffer_size)  # 设置内存分配器
 
         self.machine_op_list: List[MachineOp] = []
         self.dummy_inst = []
@@ -51,6 +51,7 @@ class Core:
 class ChipConfig(BaseModel):
     core_cnt: int = 16
     global_buffer_size: int = 1204 * 1024  # 1MByte
+    dram_size: int = 1024 * 1024 * 1024
     core_config: CoreConfig = CoreConfig()
 
 
@@ -64,6 +65,8 @@ class Chip:
         self.core_array: List[Core] = []
         for i in range(self.chip_config.core_cnt):
             self.core_array.append(Core(self.chip_config.core_config))
+
+        self.dram_allocator = MemoryAllocator(self.chip_config.dram_size)
 
     def get_unmapped_core(self):
         for core in self.core_array:

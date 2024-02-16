@@ -55,19 +55,20 @@ class SharedAddressManager(AddressManager):
         return cls.id_counter
 
     @classmethod
-    def get_shr_addr_manager(cls,id:int,size:int,memory_allocator: MemoryAllocator) -> SharedAddressManager:
+    def get_shr_addr_manager(cls, id: int, size: int, memory_allocator: MemoryAllocator) -> SharedAddressManager:
         if id in cls.id_map:
             return cls.id_map[id]
         else:
-            shr_addr_manager = SharedAddressManager(size,memory_allocator)
+            shr_addr_manager = SharedAddressManager(size, memory_allocator)
             cls.id_map[id] = shr_addr_manager
             return shr_addr_manager
+
 
 class MachineOp:
     # 直接在machine op 中构建依赖关系
     # 一条machine op 只能有一个输出, 但是可能生成多条指令
     def __init__(self, core_id: int, op_name: str,
-                 input_ops: List[MachineOp], output_manager: AddressManager):
+                 input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
         self.core_id = core_id
         self.op_name = op_name
 
@@ -95,7 +96,7 @@ class MachineOp:
 
     def code_gen(self) -> Dict:
         # vec len 的问题
-        pass
+        return {}
 
     def lower_to_inst(self):
         self.before_code_gen()
@@ -105,13 +106,13 @@ class MachineOp:
 
 
 class MachineVectorOp(MachineOp):
-    def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp], output_manager: AddressManager):
+    def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
         super().__init__(core_id, 'vector ' + vector_op_name, input_ops, output_manager)
         pass
 
 
 class MachineMatrixOp(MachineOp):
-    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: AddressManager):
+    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
         super().__init__(core_id, 'gemv', input_ops, output_manager)
 
     def code_gen(self) -> Dict:
@@ -119,8 +120,8 @@ class MachineMatrixOp(MachineOp):
 
 
 class MachineTransferOp(MachineOp):
-    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: AddressManager):
-        super().__init__(core_id, 'transfer', input_ops, output_manager)
+    def __init__(self, core_id: int, transfer_op_name: str, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
+        super().__init__(core_id, 'transfer ' + transfer_op_name, input_ops, output_manager)
         # 这个会有一些特殊
 
     def code_gen(self) -> Dict:
@@ -131,7 +132,7 @@ class MachineTransferOp(MachineOp):
 
 class MachineRearrangeOp(MachineOp):
     # 重新排布内存布局  类似于 im2col的操作
-    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: AddressManager):
+    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
         super().__init__(core_id, 're_arrange', input_ops, output_manager)
 
     def code_gen(self) -> Dict:

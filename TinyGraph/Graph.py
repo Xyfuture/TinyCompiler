@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import deque
 from typing import Dict, List, Optional, Callable, Deque, Tuple
-import numpy as np
 
 from TinyGraph.MachineOps import MachineOp
 
@@ -10,13 +9,15 @@ from TinyGraph.MachineOps import MachineOp
 class MicroOp:
     id_counter = {}
 
-    def __init__(self):
+    def __init__(self, vector_size: int = 0, **kwargs):
         self.node: Optional[MicroNode] = None
 
         self.op_id = MicroOp.id_counter.get(self.__class__, 1)
         MicroOp.id_counter[self.__class__] = self.op_id + 1
 
-        self.output_machine_op:Optional[MachineOp] = None
+        self.vector_size = vector_size  # 这个是输出的大小
+        self.output_machine_op: Optional[MachineOp] = None
+        self.kwargs = kwargs
 
     def register_node(self, node: MicroNode):
         self.node = node
