@@ -78,7 +78,7 @@ class MachineOp:
         for input_op in self.input_ops:
             input_op._user_count += 1
 
-        self.output_manager = output_manager
+        self.output_manager = output_manager  # 用于管理输出的内存地址
 
     def release_memory(self):
         # 调用 address manager 释放内存
@@ -106,21 +106,27 @@ class MachineOp:
 
 
 class MachineVectorOp(MachineOp):
-    def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
+    def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp],
+                 output_manager: Optional[AddressManager]):
         super().__init__(core_id, 'vector ' + vector_op_name, input_ops, output_manager)
         pass
 
 
 class MachineMatrixOp(MachineOp):
-    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
+    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager],
+                 start_offset:int, output_size:int ):
         super().__init__(core_id, 'gemv', input_ops, output_manager)
+
+        self.start_offset = start_offset
+        self.output_size = output_size
 
     def code_gen(self) -> Dict:
         pass
 
 
 class MachineTransferOp(MachineOp):
-    def __init__(self, core_id: int, transfer_op_name: str, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
+    def __init__(self, core_id: int, transfer_op_name: str, input_ops: List[MachineOp],
+                 output_manager: Optional[AddressManager]):
         super().__init__(core_id, 'transfer ' + transfer_op_name, input_ops, output_manager)
         # 这个会有一些特殊
 

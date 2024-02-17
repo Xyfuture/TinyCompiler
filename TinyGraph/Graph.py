@@ -3,24 +3,48 @@ from __future__ import annotations
 from collections import deque
 from typing import Dict, List, Optional, Callable, Deque, Tuple
 
-from TinyGraph.MachineOps import MachineOp
+from TinyGraph.Machine import Core
+from TinyGraph.MachineOps import MachineOp, SharedAddressManager, AddressManager
 
 
 class MicroOp:
     id_counter = {}
 
-    def __init__(self, vector_size: int = 0, **kwargs):
-        self.node: Optional[MicroNode] = None
-
+    def __init__(self, core_id: int = -1, vector_size: int = 0, src_ops: Optional[List[MicroOp]] = None,
+                 shr_manager_id: int = 0):
         self.op_id = MicroOp.id_counter.get(self.__class__, 1)
         MicroOp.id_counter[self.__class__] = self.op_id + 1
+        self.node: Optional[MicroNode] = None
+
+        self.core_id = core_id  # 这个主要指写内存的core id (针对 transfer的这种情况 )
 
         self.vector_size = vector_size  # 这个是输出的大小
+        self.shr_manager_id = shr_manager_id
+
+        if src_ops:  # 这个机制可能还要修改,暂时暂时没想好应该怎么动 ...
+            self.src_ops = src_ops
+        else:
+            self.src_ops = []
+
         self.output_machine_op: Optional[MachineOp] = None
-        self.kwargs = kwargs
+
+    def get_core_address_manager(self):
+        # 获得基于core memory allocator的 address manager
+        core = Core.get_core_by_id(self.core_id)
+        if self.shr_manager_id:
+            return SharedAddressManager.get_shr_addr_manager(
+                self.shr_manager_id, self.vector_size, core.memory_allocator
+            )
+        else:
+            return AddressManager(self.vector_size, core.memory_allocator)
 
     def register_node(self, node: MicroNode):
         self.node = node
+
+    def replace_with_new_src_op(self, old_src_op: MicroOp, new_src_op: MicroOp):
+        for index, src_op in enumerate(self.src_ops):
+            if src_op == old_src_op:
+                self.src_ops[index] = new_src_op
 
     def machine_op_gen(self):
         pass
@@ -93,6 +117,7 @@ class MicroNode:
     def all_output_nodes(self) -> List[MicroNode]:
         return list(self._output_nodes)
 
+    # TODO 要在更改这些node 的同时更改micro op相应的信息, 同时注意 micro op 的链接是单向的
     def replace_all_uses_with(self, replace_with: MicroNode,
                               delete_user_cb: Callable[[MicroNode], bool] = lambda user: True, ):
         to_process = list(self._output_nodes)
