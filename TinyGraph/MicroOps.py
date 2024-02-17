@@ -105,7 +105,7 @@ class TransferOp(MicroOp):
 
 class MatVecMulOp(MicroOp):
     def __init__(self, core_id: int, xbar_group_id: int, input_size: int, output_size: int,
-                 src_op_list: Optional[List[MicroOp]] = None, **kwargs):
+                 src_op_list: List[MicroOp], start_offset, end_offset, **kwargs):
         super().__init__(output_size, **kwargs)
 
         self.core_id = core_id
@@ -114,6 +114,10 @@ class MatVecMulOp(MicroOp):
 
         self.input_size = input_size
         self.output_size = output_size
+
+        self.start_offset = start_offset
+        self.end_offset = end_offset
+        # TODO 细化offset到 machine op中去
 
     def machine_op_gen(self):
         core = Core.get_core_by_id(self.core_id)
@@ -204,6 +208,7 @@ class PadOp(MicroOp):
         self.core_id = core_id
 
     def machine_op_gen(self):
+        # TODO 修改这个 因为不知道core id  可以通过添加Pass的方式实现core id的读取
         core = Core.get_core_by_id(self.core_id)
         output_manager = AddressManager(self.vector_size, core.memory_allocator)
         self.output_machine_op = MachineTransferOp(self.core_id, 'local_clr', [], output_manager)

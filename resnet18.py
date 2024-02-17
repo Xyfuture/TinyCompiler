@@ -10,16 +10,18 @@ def conv1x1(in_planes: int, out_planes: int, stride: Tuple[int, int] = (1, 1)):
         in_planes,
         out_planes,
         kernel_size=(1, 1),
-        stride=stride
+        stride=stride,
+        padding=1
     )
 
 
-def conv3x3(in_planes: int, out_planes: int, stride: Tuple[int, int] = (1, 1)):
+def conv3x3(in_planes: int, out_planes: int, stride: Tuple[int, int] = (1, 1), padding: int = 1):
     return DepConv2d(
         in_planes,
         out_planes,
         kernel_size=(3, 3),
-        stride=stride
+        stride=stride,
+        padding=padding
     )
 
 
@@ -71,7 +73,7 @@ class ResNet(DepModule):
         self.layer3 = self._make_layer(256, layers[2], stride=(2, 2))
         self.layer4 = self._make_layer(512, layers[3], stride=(2, 2))
 
-        self.linear1 = DepLinear(1024, 512)
+        self.linear1 = DepLinear(2048, 512)
         self.linear2 = DepLinear(512, num_classes)
 
     def forward(self, input_tensor: DepTensor):
@@ -87,7 +89,7 @@ class ResNet(DepModule):
 
         x = self.linear1(x)
         x = self.relu(x)
-        x = self.layer2(x)
+        x = self.linear2(x)
 
         return x
 
@@ -113,4 +115,4 @@ class ResNet(DepModule):
 
 
 def resnet18():
-    return ResNet([2,2,2,2],10)
+    return ResNet([2, 2, 2, 2], 10)

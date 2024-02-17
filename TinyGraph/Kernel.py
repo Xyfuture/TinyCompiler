@@ -74,15 +74,18 @@ def _sum_kernel(input_dep_tensors: List[DepTensor]) -> DepTensor:
     return tmp
 
 
-def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> DepTensor:
-    core_id = xbar_matrix.core_id
+def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_group_var: XbarGroupVar, start_offset, end_offset) -> DepTensor:
+    core_id = xbar_group_var.core_id
     input_vec.move_to(core_id)
 
+    interval = input_vec.reduced_dim_size
     vec_size = reduce(operator.mul, input_vec.tensor_shape)
-    vec_size = vec_size * input_vec.reduced_dim_size
+    vec_size = vec_size * interval
+    vec_size = vec_size - start_offset - (interval - end_offset)
+
 
     # check input size and matrix rows
-    assert vec_size == xbar_matrix.xbar_group_shape[0]
+    assert vec_size == xbar_group_var.xbar_group_shape[0]
 
     input_ops: List[MicroOp] = []
     for op in input_vec.tensor_op.flat():
@@ -91,14 +94,35 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_matrix: XbarGroupVar) -> Dep
 
     input_nodes = [op.node for op in input_ops]
 
-    mat_vec_mul_op = MatVecMulOp(core_id, xbar_matrix.xbar_group_id, vec_size, xbar_matrix.xbar_group_shape[1],
-                                 input_ops)
+    mat_vec_mul_op = MatVecMulOp(core_id, xbar_group_var.xbar_group_id, vec_size, xbar_group_var.xbar_group_shape[1],
+                                 input_ops,start_offset,end_offset)
     MicroGraph.current_graph.create_node(input_nodes, mat_vec_mul_op)
 
-    output_tensor = DepTensor((1,), xbar_matrix.xbar_group_shape[1],
+    output_tensor = DepTensor((1,), xbar_group_var.xbar_group_shape[1],
                               ConductArray.full((1,), mat_vec_mul_op),
                               ConductArray.full((1,), core_id))
     return output_tensor
+
+
+def get_xbar_group_input(input_tensor: DepTensor, start_index: int, xbar_group_i: XbarGroupVar) \
+        -> Tuple[DepTensor, int, int]:
+    # 给出当前xbar group 需要使用的input,包括他们的具体偏移量
+    # 返回 对应的向量和 在第一个interval中的起始偏移，及最后一个interval中应该读取的数据量
+
+    assert len(input_tensor.tensor_shape) == 1  # 仅限一维的操作
+
+    interval = input_tensor.reduced_dim_size
+    target = xbar_group_i.xbar_group_shape[0]
+
+    end_index = start_index + target - 1
+
+    start_interval = start_index // interval
+    end_interval = end_index // interval
+
+    offset_start = start_index % interval
+    offset_end = (end_index % interval) + 1
+
+    return input_tensor[start_interval:end_interval + 1], offset_start, offset_end
 
 
 def _conv2d_kernel(input_feature_map: DepTensor,
@@ -108,24 +132,10 @@ def _conv2d_kernel(input_feature_map: DepTensor,
                    stride: Tuple[int, int] = (1, 1),
                    padding: int = 0,
                    ) -> DepTensor:
-    def get_xbar_group_input(window_tensor: DepTensor, start_index: int, xbar_group: XbarGroupVar) -> DepTensor:
-        interval = window_tensor.reduced_dim_size
-
-        start = floor(start_index / interval)
-        end = floor(start_index + xbar_group.xbar_group_shape[0] / interval)
-
-        return window_tensor.reshape((-1,))[start:end + 1]
-
     # check
     assert in_channels == input_feature_map.reduced_dim_size \
            and in_channels * kernel_size[0] * kernel_size[1] == weight_matrix.matrix_shape[0]
-    assert out_channels == weight_matrix.matrix_shape[1]
-
-    # pad_input_op = np.pad(input_feature_map.tensor_op, ((padding, padding), (padding, padding)))
-    # pad_input_position = np.pad(input_feature_map.tensor_position, ((padding, padding), (padding, padding)))
-    # pad_shape = pad_input_op.shape
-    #
-    # pad_input_tensor = DepTensor(pad_shape, input_feature_map.reduced_dim_size, pad_input_op, pad_input_position)
+    # assert out_channels == weight_matrix.matrix_shape[1]
 
     pad_input_tensor = DepTensor.pad(input_feature_map, padding)
     pad_shape = pad_input_tensor.shape
@@ -152,7 +162,7 @@ def _conv2d_kernel(input_feature_map: DepTensor,
                 # 一次窗口
                 # 先把横着的都算完,然后在算纵向的
                 partial_sum_list: List[DepTensor] = []
-                start_index = 0
+                cur_start_index = 0
                 for xbar_i in range(xbar_rows):
                     # 计算这次需要的窗口
                     # different core use different window
@@ -164,22 +174,59 @@ def _conv2d_kernel(input_feature_map: DepTensor,
 
                     # TODO get partial window
 
-                    current_input = get_xbar_group_input(current_input_window, start_index,
-                                                         weight_matrix.xbar_group_array[xbar_i])
+                    current_input, start_offset, end_offset = get_xbar_group_input(current_input_window.reshape((-1,)),
+                                                                                   cur_start_index,
+                                                                                   weight_matrix.xbar_group_array[
+                                                                                       xbar_i])
 
                     partial_sum_list.append(
                         _xbar_vec_mul_kernel(
                             current_input,
-                            weight_matrix.xbar_group_array[xbar_i]
+                            weight_matrix.xbar_group_array[xbar_i],
+                            start_offset, end_offset
                         )
                     )
 
-                    start_index += weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0]
+                    cur_start_index += weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0]
 
                 current_output = _sum_kernel(partial_sum_list)
                 output_feature_map[i, j] = current_output
 
     return output_feature_map
+
+
+def _matrix_vec_mul_kernel(input_tensor: DepTensor,
+                           weight_matrix: MatrixVar) -> DepTensor:
+    # 可以和conv 结合起来写
+    # 更加适用于 linear的操作  单个矩阵的相乘
+
+    input_tensor.reshape((-1,))
+
+    assert len(input_tensor.tensor_shape) == 1
+
+    with MicroGraph.current_graph.use_sequential_node_dep():
+        processed_index = 0
+        partial_sum_list: List[DepTensor] = []
+
+        for xbar_i in range(len(weight_matrix.xbar_group_array)):
+            core_id = weight_matrix.xbar_group_array[xbar_i].core_id
+
+            cur_input_tensor, start_offset, end_offset = get_xbar_group_input(input_tensor, processed_index,
+                                                                              weight_matrix.xbar_group_array[xbar_i])
+
+            partial_sum_list.append(
+                _xbar_vec_mul_kernel(
+                    cur_input_tensor,
+                    weight_matrix.xbar_group_array[xbar_i],
+                    start_offset, end_offset
+                )
+            )
+
+            processed_index += weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0]
+
+        current_output = _sum_kernel(partial_sum_list)
+
+    return current_output
 
 
 def _maxpool2d_kernel(input_feature_map: DepTensor,
@@ -228,42 +275,12 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
     return output_feature_map
 
 
-def _matrix_vec_mul_kernel(input_tensor: DepTensor,
-                           weight_matrix: MatrixVar) -> DepTensor:
-    # 可以和conv 结合起来写
-    interval = input_tensor.reduced_dim_size
-
-    with MicroGraph.current_graph.use_sequential_node_dep():
-        processed_index = 0
-        partial_sum_list: List[DepTensor] = []
-
-        for xbar_i in range(len(weight_matrix.xbar_group_array)):
-            core_id = weight_matrix.xbar_group_array[xbar_i].core_id
-
-            input_start_index = floor(processed_index / interval)
-            input_end_index = floor((processed_index + weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0])
-                                    / interval) + 1
-
-            partial_sum_list.append(
-                _xbar_vec_mul_kernel(
-                    input_tensor[input_start_index:input_end_index],
-                    weight_matrix.xbar_group_array[xbar_i]
-                )
-            )
-
-            processed_index += weight_matrix.xbar_group_array[xbar_i].xbar_group_shape[0]
-
-        current_output = _sum_kernel(partial_sum_list)
-
-    return current_output
-
-
 def _relu_kernel(input_tensor: DepTensor) -> DepTensor:
     output_tensor = DepTensor(input_tensor.shape, input_tensor.reduced_dim_size)
 
     for index, position in input_tensor.tensor_position.enum():
         pre_op: MicroOp = input_tensor.tensor_op[index]
-        relu_op = ReLUOp(position, pre_op)
+        relu_op = ReLUOp(position, input_tensor.reduced_dim_size, pre_op)
         pre_node: MicroNode = pre_op.node
         MicroGraph.current_graph.create_node([pre_node], relu_op)
 

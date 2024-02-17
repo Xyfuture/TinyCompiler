@@ -54,7 +54,7 @@ class MatrixVar:
 
             group_sub_matrix_rows = xbar_rows
             for i in range(group_cnt):
-                if xbar_rows * i > matrix_rows:
+                if xbar_rows * (i + 1) > matrix_rows:
                     group_sub_matrix_rows = matrix_rows - xbar_rows * i
                 group_id = core.assign_group(xbar_cnt_per_group)
                 xbar_group = XbarGroupVar((group_sub_matrix_rows, matrix_cols)
@@ -191,7 +191,7 @@ class DepTensor:
     def pad(input_tensor: DepTensor, pad_width: int):
         # 默认是四周的映射模式
         if pad_width:
-            pad_op = PadOp(-1)
+            pad_op = PadOp(-1,input_tensor.reduced_dim_size)
             MicroGraph.current_graph.create_node([], pad_op)
 
             tensor_op = ConductArray.pad(input_tensor.tensor_op, pad_width, pad_op)

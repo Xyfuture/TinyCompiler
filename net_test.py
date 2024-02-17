@@ -29,3 +29,5 @@ net = resnet18()
 net.mapping()
 
 output_tensor = net(input_tensor)
+
+print("pass")
