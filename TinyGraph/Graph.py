@@ -128,8 +128,10 @@ class MicroNode:
                 skipped.append(node)
                 continue
 
-            node.__remove_input_node(self)
-            node.__add_input_node(replace_with)
+            # node.__remove_input_node(self)
+            # node.__add_input_node(replace_with)
+
+            node.__replace_input_with(self,replace_with)
 
         return [node for node in to_process if node not in skipped]
 
@@ -138,8 +140,7 @@ class MicroNode:
         append_with.__add_input_node(self)
 
     def replace_input_with(self, old_input: MicroNode, new_input: MicroNode):
-        self.__remove_input_node(old_input)
-        self.__add_input_node(new_input)
+        self.__replace_input_with(old_input,new_input)
 
     def __update_input_nodes(self, new_input_nodes: List[MicroNode]):
         """
@@ -166,6 +167,20 @@ class MicroNode:
     def __add_input_node(self, to_add: MicroNode):
         to_add._output_nodes.setdefault(self)
         self._input_nodes.setdefault(to_add)
+
+    def __replace_input_with(self,old_input:MicroNode,new_input:MicroNode):
+        # 替换 micro node的同时实现 micro op中 src op的替换工作
+        # 替换 src op
+        old_micro_op = old_input.micro_op
+        for index,src_op in enumerate(self.micro_op.src_ops):
+            if src_op == old_micro_op:
+                self.micro_op.src_ops[index] = new_input.micro_op
+        # 替换 micro node
+        old_input._output_nodes.pop(self)
+        self._input_nodes.pop(old_input)
+
+        new_input._output_nodes.setdefault(self)
+        self._input_nodes.setdefault(new_input)
 
     def check_connection(self):
         for node in self._input_nodes:

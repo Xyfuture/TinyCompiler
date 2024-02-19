@@ -276,16 +276,26 @@ def pad_to_core(graph: MicroGraph):
         micro_op = node.micro_op
         if isinstance(micro_op, PadOp) and micro_op.core_id == -1:
             # 未经过分配的 pad
-            user_core_map: Dict[int, PadOp] = {}
+            user_core_map: Dict[int, MicroNode] = {}
             user_node: MicroNode
             for user_node in node._output_nodes:
                 user_micro_op = user_node.micro_op
                 user_core_id = user_micro_op.core_id
 
                 if user_core_id in user_core_map:
-                    new_pad_op = user_core_map[user_core_id]
-                    # TODO 大改一下micro op 的结构了
-                    # 现在micro op 不支持 对 src 进行修改 这是个问题
-
+                    # 当前 new_node 已经被创建，因此直接更改就可以了
+                    new_pad_node = user_core_map[user_core_id]
+                    user_node.replace_input_with(node,new_pad_node)
                 else:
-                    pass
+                    new_pad_op = PadOp(user_core_id,micro_op.vector_size,micro_op.shr_manager_id)
+                    # pad op 不需要任何的input node 所以可以直接的创建
+                    # create node method 也可以被替换掉，直接手动添加
+                    new_pad_node = MicroGraph.current_graph.create_node([],new_pad_op)
+
+                    # 将user的input_nodes 进行替换
+                    user_node.replace_input_with(node,new_pad_node)
+
+                    # 更新 user_core_map
+                    user_core_map[user_core_id] = new_pad_node
+
+
