@@ -135,7 +135,7 @@ def _conv2d_kernel(input_feature_map: DepTensor,
     # check
     assert in_channels == input_feature_map.reduced_dim_size \
            and in_channels * kernel_size[0] * kernel_size[1] == weight_matrix.matrix_shape[0]
-    # assert out_channels == weight_matrix.matrix_shape[1]
+    assert out_channels == weight_matrix.matrix_shape[1]
 
     pad_input_tensor = DepTensor.pad(input_feature_map, padding)
     pad_shape = pad_input_tensor.shape
@@ -171,8 +171,6 @@ def _conv2d_kernel(input_feature_map: DepTensor,
                                            i * stride[0]:i * stride[0] + kernel_size[0],
                                            j * stride[1]:j * stride[1] + kernel_size[1]
                                            ]
-
-                    # TODO get partial window
 
                     current_input, start_offset, end_offset = get_xbar_group_input(current_input_window.reshape((-1,)),
                                                                                    cur_start_index,
@@ -237,12 +235,6 @@ def _maxpool2d_kernel(input_feature_map: DepTensor,
     # 核选择第一个元素所在的核
     core_id: int = input_feature_map.tensor_position[0, 0]
     vector_size = input_feature_map.reduced_dim_size
-
-    # pad_input_op = np.pad(input_feature_map.tensor_op, ((padding, padding), (padding, padding)))
-    # pad_input_position = np.pad(input_feature_map.tensor_position, ((padding, padding), (padding, padding)))
-    # pad_shape = pad_input_op.shape
-    #
-    # pad_input_tensor = DepTensor(pad_shape, input_feature_map.reduced_dim_size, pad_input_op, pad_input_position)
 
     pad_input_tensor = DepTensor.pad(input_feature_map, padding)
     pad_shape = pad_input_tensor.shape

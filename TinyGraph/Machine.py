@@ -1,7 +1,8 @@
 from __future__ import annotations
+
+from math import ceil
 from typing import List, Dict, Tuple, Optional
 from pydantic import BaseModel
-
 
 
 class CoreConfig(BaseModel):
@@ -27,19 +28,10 @@ class Core:
         self.machine_op_list: List[MachineOp] = []
         self.dummy_inst = []
 
-        self.xbar_mapping: Dict[int, int] = {}  # key: xbar id value: group id
-        self.unused_xbar_cnt = self.core_config.xbar_cnt
-        self.group_cnt = 0
+        self.xbar_allocator = XbarAllocator(self.core_config.xbar_cnt)
 
-    def assign_group(self, xbar_cnt: int):
-        if self.unused_xbar_cnt < xbar_cnt:
-            assert False
-        self.unused_xbar_cnt -= xbar_cnt
-        self.group_cnt += 1
-        group_id = self.group_cnt
-        for i in range(len(self.xbar_mapping), len(self.xbar_mapping) + xbar_cnt):
-            self.xbar_mapping[i] = group_id
-        return group_id
+    def assign_group(self, request_xbar_cnt: int):
+        return self.xbar_allocator.assign_xbar_group(request_xbar_cnt)
 
     @classmethod
     def get_core_by_id(cls, core_id: int):
@@ -53,6 +45,8 @@ class ChipConfig(BaseModel):
     global_buffer_size: int = 1204 * 1024  # 1MByte
     dram_size: int = 1024 * 1024 * 1024
     core_config: CoreConfig = CoreConfig()
+
+    mapping_strategy: str = "utilization"
 
 
 class Chip:
@@ -68,13 +62,65 @@ class Chip:
 
         self.dram_allocator = MemoryAllocator(self.chip_config.dram_size)
 
-    def get_unmapped_core(self):
-        for core in self.core_array:
-            if core.unused_xbar_cnt == core.core_config.xbar_cnt:
-                return core
+        # 为实现 mapping 需要记录的变量
+        self.next_mapping_index = 0  # 每次都是从这个index开始，向后查找能mapping的 core
+
+    def mapping_matrix_to_core(self, matrix_shape: Tuple[int, int]):
+        xbar_cell_bit = self.chip_config.core_config.xbar_cell_bit
+        xbar_size = self.chip_config.core_config.xbar_size
+
+        xbar_rows, xbar_cols = xbar_size
+
+        matrix_rows, matrix_cols = matrix_shape
+
+        xbar_cnt_per_group = ceil((matrix_cols * 8 / xbar_cell_bit) / xbar_cols)
+        group_cnt = ceil(matrix_rows / xbar_rows)
+
+        # assign_list: List[Tuple[int, int]] = []  # (core_id,group_id)
+
+        if self.chip_config.mapping_strategy == 'utilization':
+            return self.utilization_first_mapping(group_cnt,xbar_cnt_per_group)
+        elif self.chip_config.mapping_strategy == 'performance':
+            return self.performance_first_mapping(group_cnt,xbar_cnt_per_group)
+
         return None
 
     # 如何分配新的核
+    def performance_first_mapping(self, group_cnt: int, xbar_cnt_per_group: int):
+        # 返回core id 和 xbar group id
+        # 每次都是从没有map过的core 开始 map
+
+        assign_list = []
+        assigned_cnt = 0
+
+        while assigned_cnt < group_cnt:
+            cur_core = self.core_array[self.next_mapping_index]
+            while cur_core.xbar_allocator.empty_xbar_cnt >= xbar_cnt_per_group and \
+                    assigned_cnt < group_cnt:
+                xbar_group_id = cur_core.xbar_allocator.assign_xbar_group(xbar_cnt_per_group)
+                assign_list.append((cur_core.core_id, xbar_group_id))
+                assigned_cnt += 1
+            self.next_mapping_index += 1
+            if self.next_mapping_index >= self.chip_config.core_cnt:
+                return None
+
+        return assigned_cnt
+
+    def utilization_first_mapping(self, group_cnt: int, xbar_cnt_per_group: int):
+        # 返回 core id 和 xbar group id 的 list
+        assign_list: List[Tuple[int, int]] = []
+        assigned_cnt = 0
+        for core in self.core_array:
+            while core.xbar_allocator.empty_xbar_cnt >= xbar_cnt_per_group and \
+                    assigned_cnt < group_cnt:
+                xbar_group_id = core.assign_group(xbar_cnt_per_group)
+                assign_list.append((core.core_id, xbar_group_id))
+                assigned_cnt += 1
+
+        if assigned_cnt != group_cnt:
+            return None
+
+        return assign_list
 
 
 class _Node:
@@ -149,8 +195,23 @@ class MemoryAllocator:
         self.memory_blocks.append(_Node(MemoryBlock(0, self.memory_capacity, False)))
         self.allocated_size = 0
 
+    @property
+    def empty_size(self) -> int:
+        return self.memory_capacity - self.allocated_size
+
+    def get_block_info(self, block_start_addr):
+        # 返回地址对应block的信息, 起始地址,大小和占用情况
+        for index, node in enumerate(self.memory_blocks):
+            memory_block: MemoryBlock = node.payload
+            start_addr, end_addr, allocated = memory_block.start_addr, memory_block.end_addr, memory_block.allocated
+            if start_addr == block_start_addr:
+                return start_addr, end_addr - start_addr, allocated
+
+        # 没有找到的情况
+        return None
+
     def malloc(self, request_size: int) -> Optional[int]:
-        # 输入 申请的内存大小, 返回内存地址
+        # 输入 申请的内存大小, 返回内存地址 如果内存空间不够,就返回None 记得 check 一下
         def _malloc():
             for index, node in enumerate(self.memory_blocks):
                 memory_block: MemoryBlock = node.payload
@@ -204,3 +265,27 @@ class MemoryAllocator:
                 # prev node 不用向后移动
             else:
                 prev_node = node
+
+
+class XbarAllocator:
+    def __init__(self, xbar_cnt: int):
+        super().__init__(xbar_cnt)
+        self.xbar_cnt = xbar_cnt
+        self.xbar_group_cnt = 0
+        self.xbar_group_id_addr_map: Dict[int, int] = {}  # 映射 xbar_group_id 到 其在 memory_allocator中的地址
+
+        self.allocator = MemoryAllocator(xbar_cnt)
+
+    @property
+    def empty_xbar_cnt(self):
+        return self.allocator.empty_size
+
+    def assign_xbar_group(self, request_xbar_cnt):
+        addr = self.allocator.malloc(request_xbar_cnt)
+        if addr is not None:
+            self.xbar_group_id_addr_map[self.xbar_group_cnt] = addr
+            xbar_group_id = self.xbar_group_cnt
+            self.xbar_group_cnt += 1
+            return xbar_group_id
+        else:
+            return None  # 分配失败

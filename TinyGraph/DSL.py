@@ -24,6 +24,9 @@ class XbarGroupVar:
     def mul_vector(self, src_vector: DepTensor):
         pass
 
+    def mapping(self):
+        pass
+
 
 class MatrixVar:
     def __init__(self, matrix_shape: Tuple[int, int]):
@@ -35,33 +38,19 @@ class MatrixVar:
         pass
 
     def mapping(self):
-        chip_config = Chip.current_chip.chip_config
-        xbar_cell_bit = chip_config.core_config.xbar_cell_bit
-        xbar_size = chip_config.core_config.xbar_size
-        xbar_rows, xbar_cols = xbar_size
-        xbar_cnt_per_core = chip_config.core_config.xbar_cnt
+        xbar_rows, xbar_cols = Chip.current_chip.chip_config.core_config.xbar_size
 
         matrix_rows, matrix_cols = self.matrix_shape
 
-        xbar_cnt_per_group = ceil((matrix_cols * 8 / xbar_cell_bit) / xbar_cols)
-        group_cnt = ceil(matrix_rows / xbar_rows)
+        assign_list = Chip.current_chip.mapping_matrix_to_core(self.matrix_shape)
+        for index, (core_id, group_id) in enumerate(assign_list):
+            if xbar_rows * (index + 1) > matrix_rows:
+                cur_xbar_group_rows = matrix_rows - xbar_rows * index
+            else:
+                cur_xbar_group_rows = xbar_rows
 
-        total_xbar_cnt = xbar_cnt_per_group * group_cnt
-
-        if total_xbar_cnt < xbar_cnt_per_core:
-            # 假设每次都分配一个新的核
-            core = Chip.current_chip.get_unmapped_core()
-
-            group_sub_matrix_rows = xbar_rows
-            for i in range(group_cnt):
-                if xbar_rows * (i + 1) > matrix_rows:
-                    group_sub_matrix_rows = matrix_rows - xbar_rows * i
-                group_id = core.assign_group(xbar_cnt_per_group)
-                xbar_group = XbarGroupVar((group_sub_matrix_rows, matrix_cols)
-                                          , core.core_id, group_id)
-                self.xbar_group_array.append(xbar_group)
-        else:
-            assert False
+            xbar_group = XbarGroupVar((cur_xbar_group_rows, matrix_cols), core_id, group_id)
+            self.xbar_group_array.append(xbar_group)
 
     def dummy_mapping(self):
         core = Core()
@@ -191,7 +180,7 @@ class DepTensor:
     def pad(input_tensor: DepTensor, pad_width: int):
         # 默认是四周的映射模式
         if pad_width:
-            pad_op = PadOp(-1,input_tensor.reduced_dim_size)
+            pad_op = PadOp(-1, input_tensor.reduced_dim_size)
             MicroGraph.current_graph.create_node([], pad_op)
 
             tensor_op = ConductArray.pad(input_tensor.tensor_op, pad_width, pad_op)
