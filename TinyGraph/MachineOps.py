@@ -109,7 +109,18 @@ class MachineVectorOp(MachineOp):
     def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp],
                  output_manager: Optional[AddressManager]):
         super().__init__(core_id, 'vector ' + vector_op_name, input_ops, output_manager)
+        self.vector_op_name = vector_op_name
         pass
+
+    def code_gen(self) -> Dict:
+        assert self.input_ops[0].output_manager.size == self.output_manager.size
+        inst = {'op': self.vector_op_name,
+                'rs1_addr':self.input_ops[0],'rs2_addr':self.input_ops[1],
+                'len':self.output_manager.size}
+
+        return inst
+
+
 
 
 class MachineMatrixOp(MachineOp):
