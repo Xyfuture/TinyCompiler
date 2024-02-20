@@ -197,7 +197,6 @@ class MachineTransferOp(MachineOp):
 
 class MachineRearrangeOp(MachineOp):
     # 重新排布内存布局  类似于 im2col的操作
-    # TODO 输入的大小和offset需要记录一下
     def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager],
                  start_offset: int, end_offset: int):
         super().__init__(core_id, 're_arrange', input_ops, output_manager)

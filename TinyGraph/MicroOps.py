@@ -112,8 +112,6 @@ class MatVecMulOp(MicroOp):
     def machine_op_gen(self):
         core = Core.get_core_by_id(self.core_id)
 
-        # TODO 验证一下输入的规模 是否和想要的一致, 似乎不太好改动
-        assert self.input_size == 1
         # TODO 修改 模拟器 改变其 读写内存的方式,不在以 pe num 为准
         # TODO 支持对应位置的访存方式
 
