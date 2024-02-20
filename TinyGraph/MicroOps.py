@@ -181,10 +181,11 @@ class MaxPool2dOp(MicroOp):
 class PadOp(MicroOp):
     def __init__(self, core_id: int, vector_size: int, shr_manager_id: int = 0):
         super().__init__(core_id, vector_size, [], shr_manager_id)
-        self.core_id = core_id
 
     def machine_op_gen(self):
         # TODO 修改这个 因为不知道core id  可以通过添加Pass的方式实现core id的读取
+        if self.core_id < 0 :
+            return
         core = Core.get_core_by_id(self.core_id)
         output_manager = AddressManager(self.vector_size, core.memory_allocator)
         self.output_machine_op = MachineTransferOp(self.core_id, 'local_clr', [], output_manager)
@@ -280,7 +281,7 @@ def pad_to_core(graph: MicroGraph):
             # 未经过分配的 pad
             user_core_map: Dict[int, MicroNode] = {}
             user_node: MicroNode
-            for user_node in node._output_nodes:
+            for user_node in list(node._output_nodes):
                 user_micro_op = user_node.micro_op
                 user_core_id = user_micro_op.core_id
 

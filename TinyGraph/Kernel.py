@@ -95,7 +95,7 @@ def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_group_var: XbarGroupVar, sta
 
     input_nodes = [op.node for op in input_ops]
 
-    mat_vec_mul_op = MatVecMulOp(core_id, xbar_group_var.xbar_group_id, vec_size, xbar_group_var.xbar_group_shape[1],
+    mat_vec_mul_op = MatVecMulOp(core_id, xbar_group_var.group_id,xbar_group_var.xbar_cnt, vec_size, xbar_group_var.xbar_group_shape[1],
                                  input_ops,start_offset,end_offset)
     MicroGraph.current_graph.create_node(input_nodes, mat_vec_mul_op)
 

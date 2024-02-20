@@ -1,8 +1,8 @@
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
-from TinyGraph.Graph import MicroGraph
+from TinyGraph.Graph import MicroGraph, MicroNode, topo_sort
 from TinyGraph.Machine import Chip, ChipConfig
-from TinyGraph.MicroOps import RawInputOp
+from TinyGraph.MicroOps import RawInputOp, pad_to_core
 from resnet18 import resnet18
 
 chip_config = ChipConfig()
@@ -27,7 +27,22 @@ for i in range(input_shape[0]):
 net = resnet18()
 
 net.mapping()
-
 output_tensor = net(input_tensor)
+
+# 跑一些 pass
+
+pad_to_core(graph)
+
+# 拓扑序
+
+topo_node_list = topo_sort(graph)
+
+# lower to machine op
+
+for node in topo_node_list:
+    node.micro_op.machine_op_gen()
+
+# lower to inst
+
 
 print("pass")

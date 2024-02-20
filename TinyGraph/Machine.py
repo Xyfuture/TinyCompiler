@@ -269,7 +269,6 @@ class MemoryAllocator:
 
 class XbarAllocator:
     def __init__(self, xbar_cnt: int):
-        super().__init__(xbar_cnt)
         self.xbar_cnt = xbar_cnt
         self.xbar_group_cnt = 0
         self.xbar_group_id_addr_map: Dict[int, int] = {}  # 映射 xbar_group_id 到 其在 memory_allocator中的地址

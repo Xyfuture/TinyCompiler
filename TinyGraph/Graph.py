@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Dict, List, Optional, Callable, Deque, Tuple
+from typing import Dict, List, Optional, Callable, Deque, Tuple, Union
 
 from TinyGraph.Machine import Core
 from TinyGraph.MachineOps import MachineOp, SharedAddressManager, AddressManager
@@ -10,7 +10,7 @@ from TinyGraph.MachineOps import MachineOp, SharedAddressManager, AddressManager
 class MicroOp:
     id_counter = {}
 
-    def __init__(self, core_id: int = -1, vector_size: int = 0, src_ops: Optional[List[MicroOp]] = None,
+    def __init__(self, core_id: int = -1, vector_size: int = 0, src_ops: Union[List[MicroOp],MicroOp,None] = None,
                  shr_manager_id: int = 0):
         self.op_id = MicroOp.id_counter.get(self.__class__, 1)
         MicroOp.id_counter[self.__class__] = self.op_id + 1
@@ -22,7 +22,10 @@ class MicroOp:
         self.shr_manager_id = shr_manager_id
 
         if src_ops:  # 这个机制可能还要修改,暂时暂时没想好应该怎么动 ...
-            self.src_ops = src_ops
+            if isinstance(src_ops,List):
+                self.src_ops = src_ops
+            else:
+                self.src_ops = [src_ops]
         else:
             self.src_ops = []
 
