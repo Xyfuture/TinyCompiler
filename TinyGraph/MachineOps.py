@@ -107,50 +107,148 @@ class MachineOp:
 
 class MachineVectorOp(MachineOp):
     def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp],
-                 output_manager: Optional[AddressManager]):
+                 output_manager: Optional[AddressManager], **kwargs):
         super().__init__(core_id, 'vector ' + vector_op_name, input_ops, output_manager)
         self.vector_op_name = vector_op_name
-        pass
+
+        self.kwargs = kwargs  # 存储 imm
 
     def code_gen(self) -> Dict:
-        assert self.input_ops[0].output_manager.size == self.output_manager.size
-        inst = {'op': self.vector_op_name,
-                'rs1_addr':self.input_ops[0],'rs2_addr':self.input_ops[1],
-                'len':self.output_manager.size}
+        for src_op in self.input_ops:
+            assert src_op.output_manager.size == self.output_manager.size
+
+        inst = {"op": self.vector_op_name, 'dst_addr': self.output_manager.addr, 'len': self.output_manager.size}
+
+        for i, src_op in enumerate(self.input_ops):
+            inst[f'src{i}_addr'] = src_op.output_manager.addr
+
+        for k, v in self.kwargs.items():
+            inst[k] = v
 
         return inst
 
 
-
-
 class MachineMatrixOp(MachineOp):
     def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager],
-                 start_offset:int, output_size:int ):
+                 input_size: int, output_size: int, group_id: int, xbar_cnt: int):
         super().__init__(core_id, 'gemv', input_ops, output_manager)
 
-        self.start_offset = start_offset
+        self.input_size = input_size
         self.output_size = output_size
 
+        self.group_id = group_id
+        self.xbar_cnt = xbar_cnt
+
     def code_gen(self) -> Dict:
-        pass
+        assert self.output_manager.size == self.output_size
+        assert len(self.input_ops) == 1
+        assert self.input_size == self.input_ops[0].output_manager.size
+
+        inst = {'op': 'gemv', 'dst_addr': self.output_manager.addr,
+                'input_len': self.input_size, 'output_len': self.output_manager.size,
+                'group_id': self.group_id, 'xbar_cnt': self.xbar_cnt,
+                'src1_addr': self.input_ops[0].output_manager.addr}
+
+        return inst
 
 
 class MachineTransferOp(MachineOp):
     def __init__(self, core_id: int, transfer_op_name: str, input_ops: List[MachineOp],
-                 output_manager: Optional[AddressManager]):
+                 output_manager: Optional[AddressManager],
+                 dst_core_id: Optional[int] = None, src_core_id: Optional[int] = None):
         super().__init__(core_id, 'transfer ' + transfer_op_name, input_ops, output_manager)
         # 这个会有一些特殊
 
+        self.transfer_op_name = transfer_op_name
+
+        self.dst_core_id = dst_core_id
+        self.src_core_id = src_core_id
+
     def code_gen(self) -> Dict:
-        # 插入一个同步指令
-        # 插入一个 global memory的传输指令
-        pass
+        # 直接使用send recv 进行数据传输
+        # dram_to_local local_to_dram
+        # send recv
+        # dram_clr local_clr
+
+        inst = {'op': self.transfer_op_name}
+
+        if self.transfer_op_name == 'send':
+            assert len(self.input_ops) == 1
+            inst['src1_addr'] = self.input_ops[0].output_manager.addr
+            inst['imm'] = self.dst_core_id  # core
+            inst['len'] = self.input_ops[0].output_manager.size
+        elif self.transfer_op_name == 'recv':
+            assert len(self.input_ops) == 0
+            inst['dst_addr'] = self.output_manager.addr
+            inst['imm'] = self.src_core_id
+            inst['len'] = self.output_manager.size
+        elif self.transfer_op_name == 'local_clr':
+            inst['dst_addr'] = self.output_manager.addr
+            inst['len'] = self.output_manager.size
+        elif self.transfer_op_name == 'dram_to_local':
+            inst['dst_addr'] = self.output_manager.addr
+            inst['src1_addr'] = self.input_ops[0].output_manager.addr
+            inst['len'] = self.input_ops[0].output_manager.size
+        else:
+            assert False
+
+        return inst
 
 
 class MachineRearrangeOp(MachineOp):
     # 重新排布内存布局  类似于 im2col的操作
-    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager]):
+    # TODO 输入的大小和offset需要记录一下
+    def __init__(self, core_id: int, input_ops: List[MachineOp], output_manager: Optional[AddressManager],
+                 start_offset: int, end_offset: int):
         super().__init__(core_id, 're_arrange', input_ops, output_manager)
 
-    def code_gen(self) -> Dict:
-        pass
+        self.start_offset = start_offset
+        self.end_offset = end_offset
+
+    def code_gen(self) -> List[Dict]:
+        # 堆上一堆 local cpy 可以实现数据的重新布局
+        # 注意偏移的情况
+        inst_list = []
+        if len(self.input_ops) == 1:
+            # 一条指令的情况可以特殊处理
+            cur_input_op = self.input_ops[0]
+            start_address = cur_input_op.output_manager.addr + self.start_offset
+            size = self.end_offset - self.start_offset
+            assert size == self.output_manager.size
+            inst_list.append(
+                {'op': 'local_cpy', 'dst_addr': self.output_manager.addr,
+                 'src1_addr': start_address, 'len': self.output_manager.size}
+            )
+        else:
+            dst_addr = self.output_manager.addr
+
+            start_input_op = self.input_ops[0]
+            start_address = start_input_op.output_manager.addr + self.start_offset
+            start_len = start_input_op.output_manager.size - self.start_offset
+            assert start_len > 0
+            inst_list.append(
+                {'op': 'local_cpy', 'dst_addr': dst_addr,
+                 'src1_addr': start_address, 'len': start_len}
+            )
+            dst_addr += start_len
+
+            # 处理中间的情况
+            for i in range(1, len(self.input_ops) - 1):
+                cur_input_op = self.input_ops[i]
+                inst_list.append(
+                    {'op': 'local_cpy', 'dst_addr': dst_addr,
+                     'src1_addr': cur_input_op.output_manager.addr, 'len': cur_input_op.output_manager.size}
+                )
+                dst_addr += cur_input_op.output_manager.size
+
+            # 处理最后的情况
+            end_input_op = self.input_ops[-1]
+            inst_list.append(
+                {'op': 'local_cpy', 'dst_addr': dst_addr,
+                 'src1_addr': end_input_op.output_manager.addr, 'len': self.end_offset}
+            )
+            dst_addr += self.end_offset
+
+            assert dst_addr == self.output_manager.addr + self.output_manager.size
+
+        return inst_list

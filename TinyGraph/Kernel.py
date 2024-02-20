@@ -75,6 +75,7 @@ def _sum_kernel(input_dep_tensors: List[DepTensor]) -> DepTensor:
 
 
 def _xbar_vec_mul_kernel(input_vec: DepTensor, xbar_group_var: XbarGroupVar, start_offset, end_offset) -> DepTensor:
+    # 执行单个 xbar group 与 input的乘法
     core_id = xbar_group_var.core_id
     input_vec.move_to(core_id)
 

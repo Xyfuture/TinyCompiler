@@ -79,9 +79,9 @@ class Chip:
         # assign_list: List[Tuple[int, int]] = []  # (core_id,group_id)
 
         if self.chip_config.mapping_strategy == 'utilization':
-            return self.utilization_first_mapping(group_cnt,xbar_cnt_per_group)
+            return self.utilization_first_mapping(group_cnt, xbar_cnt_per_group)
         elif self.chip_config.mapping_strategy == 'performance':
-            return self.performance_first_mapping(group_cnt,xbar_cnt_per_group)
+            return self.performance_first_mapping(group_cnt, xbar_cnt_per_group)
 
         return None
 

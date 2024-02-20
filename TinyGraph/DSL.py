@@ -12,20 +12,12 @@ from TinyGraph.MicroOps import TransferOp, PadOp
 
 
 class XbarGroupVar:
-    def __init__(self, xbar_group_shape: Tuple[int, int], core_id: int, group_id: int):
+    def __init__(self, xbar_group_shape: Tuple[int, int], core_id: int, group_id: int, xbar_cnt:int):
         self.core_id: int = core_id
         self.group_id = group_id
-
-        self.xbar_group_id = 0
-        self.xbar_array_count: int = 0
+        self.xbar_cnt = xbar_cnt # 该 group 中有几个xbar
 
         self.xbar_group_shape: Tuple[int, int] = xbar_group_shape
-
-    def mul_vector(self, src_vector: DepTensor):
-        pass
-
-    def mapping(self):
-        pass
 
 
 class MatrixVar:
@@ -39,8 +31,10 @@ class MatrixVar:
 
     def mapping(self):
         xbar_rows, xbar_cols = Chip.current_chip.chip_config.core_config.xbar_size
-
+        xbar_cell_bit = Chip.current_chip.chip_config.core_config.xbar_cell_bit
         matrix_rows, matrix_cols = self.matrix_shape
+
+        xbar_cnt_per_group = ceil((matrix_cols * 8 / xbar_cell_bit) / xbar_cols)
 
         assign_list = Chip.current_chip.mapping_matrix_to_core(self.matrix_shape)
         for index, (core_id, group_id) in enumerate(assign_list):
@@ -49,7 +43,7 @@ class MatrixVar:
             else:
                 cur_xbar_group_rows = xbar_rows
 
-            xbar_group = XbarGroupVar((cur_xbar_group_rows, matrix_cols), core_id, group_id)
+            xbar_group = XbarGroupVar((cur_xbar_group_rows, matrix_cols), core_id, group_id,xbar_cnt_per_group)
             self.xbar_group_array.append(xbar_group)
 
     def dummy_mapping(self):

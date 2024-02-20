@@ -95,36 +95,40 @@ class TransferOp(MicroOp):
 
 
 class MatVecMulOp(MicroOp):
-    def __init__(self, core_id: int, xbar_group_id: int, input_size: int, output_size: int,
-                 src_op_list: List[MicroOp], start_offset, end_offset, shr_manager_id: int = 0):
-        super().__init__(core_id, output_size, src_op_list, shr_manager_id)
+    def __init__(self, core_id: int, group_id: int, xbar_cnt:int, input_size: int, output_size: int,
+                 src_ops: List[MicroOp], start_offset, end_offset, shr_manager_id: int = 0):
+        super().__init__(core_id, output_size, src_ops, shr_manager_id)
 
         self.core_id = core_id
-        self.xbar_group_id = xbar_group_id
+        self.group_id = group_id
+        self.xbar_cnt = xbar_cnt
 
         self.input_size = input_size
         self.output_size = output_size
 
-        self.start_offset = start_offset
-        self.end_offset = end_offset
-        # TODO 细化offset到 machine op中去
+        self.start_offset = start_offset # 起始的偏移 与第一个 input op 输出的地址相比
+        self.end_offset = end_offset # 结束时应该读取的地址长度  从最后一个 input op的输出地址开始应该读取的地址长度
 
     def machine_op_gen(self):
         core = Core.get_core_by_id(self.core_id)
 
+        # TODO 验证一下输入的规模 是否和想要的一致, 似乎不太好改动
+        assert self.input_size == 1
         # TODO 修改 模拟器 改变其 读写内存的方式,不在以 pe num 为准
         # TODO 支持对应位置的访存方式
 
         # 输入是一系列 vector , 需要先reshape到一个vector
         input_machine_ops = [op.output_machine_op for op in self.src_ops]
-        reshape_output_manager = AddressManager(self.input_size, core.memory_allocator)  # TODO 可能也需要修改这一个
-        reshape_machine_op = MachineRearrangeOp(self.core_id, input_machine_ops, reshape_output_manager)
+        reshape_output_manager = AddressManager(self.input_size, core.memory_allocator)
+        # 添加reshape 的offset信息,修正读的范围
+        reshape_machine_op = MachineRearrangeOp(self.core_id, input_machine_ops, reshape_output_manager,
+                                                self.start_offset,self.end_offset)
         core.machine_op_list.append(reshape_machine_op)
 
         # 执行矩阵操作
         output_manager = self.get_core_address_manager()
         matrix_machine_op = MachineMatrixOp(self.core_id, [reshape_machine_op], output_manager,
-                                            self.start_offset, self.output_size)
+                                            self.input_size, self.output_size, self.group_id, self.xbar_cnt)
         self.output_machine_op = matrix_machine_op
         core.machine_op_list.append(matrix_machine_op)
 
