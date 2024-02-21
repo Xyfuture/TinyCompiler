@@ -51,9 +51,9 @@ for node in topo_node_list:
 # lower to inst
 
 #
-# for index,machine_op in enumerate(chip.core_array[0].machine_op_list):
-#     print(f"{index} : {machine_op}")
-# print('all machine ops')
+for index,machine_op in enumerate(chip.core_array[0].machine_op_list):
+    print(f"{index} : {machine_op}")
+print('all machine ops')
 #
 
 

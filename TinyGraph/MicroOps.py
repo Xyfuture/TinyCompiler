@@ -52,10 +52,15 @@ class TransferOp(MicroOp):
             # 得改成send/recv的模式 这里直接send吧
             # TODO 目前两个src id dst id是互相不知道的
 
-            if self.src_core_id == 1 and self.src_ops[0].output_machine_op.core_id == 3:
-                assert False
+            # if self.src_core_id == 1 and self.src_ops[0].output_machine_op.core_id == 3:
+            #     assert False
 
-            src_machine_op = MachineTransferOp(self.src_core_id, 'send', [self.src_ops[0].output_machine_op], None)
+            src_micro_op = self.src_ops[0]
+            while isinstance(src_micro_op,TransferOp):
+                src_micro_op = src_micro_op.src_ops[0]
+
+
+            src_machine_op = MachineTransferOp(self.src_core_id, 'send', [src_micro_op.output_machine_op], None)
             src_core.machine_op_list.append(src_machine_op)
 
             output_manager = self.get_core_address_manager()
