@@ -37,7 +37,7 @@ def _add_same_core_kernel(in_1: DepTensor, in_2: DepTensor) -> DepTensor:
         core_id = in_1.tensor_position[index]
         dim_size = in_1.reduced_dim_size
         src_op = [in_1.tensor_op[index], in_2.tensor_op[index]]
-        add_op = AddOp(core_id, dim_size, src_op[0], src_op[1])
+        add_op = AddOp(core_id, dim_size, [src_op[0], src_op[1]])
 
         input_nodes = [in_1.tensor_op[index].node, in_2.tensor_op[index].node]
 

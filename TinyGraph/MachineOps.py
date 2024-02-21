@@ -82,10 +82,12 @@ class MachineOp:
 
     def release_memory(self):
         # 调用 address manager 释放内存
-        self.output_manager.free()
+        if self.output_manager:
+            self.output_manager.free()
 
     def before_code_gen(self):
-        self.output_manager.malloc()
+        if self.output_manager:
+            self.output_manager.malloc()
 
     def after_code_gen(self):
         # 释放依赖关系
@@ -104,6 +106,8 @@ class MachineOp:
         self.after_code_gen()
         return inst
 
+    def __repr__(self):
+        return "MachineOp"
 
 class MachineVectorOp(MachineOp):
     def __init__(self, core_id: int, vector_op_name: str, input_ops: List[MachineOp],
@@ -126,6 +130,9 @@ class MachineVectorOp(MachineOp):
             inst[k] = v
 
         return inst
+
+    def __repr__(self):
+        return "VectorOp"
 
 
 class MachineMatrixOp(MachineOp):
@@ -150,6 +157,9 @@ class MachineMatrixOp(MachineOp):
                 'src1_addr': self.input_ops[0].output_manager.addr}
 
         return inst
+
+    def __repr__(self):
+        return "MatrixOp"
 
 
 class MachineTransferOp(MachineOp):
@@ -193,6 +203,9 @@ class MachineTransferOp(MachineOp):
             assert False
 
         return inst
+
+    def __repr__(self):
+        return "TransferOp"
 
 
 class MachineRearrangeOp(MachineOp):
@@ -251,3 +264,6 @@ class MachineRearrangeOp(MachineOp):
             assert dst_addr == self.output_manager.addr + self.output_manager.size
 
         return inst_list
+
+    def __repr__(self):
+        return "RearrangeOp"

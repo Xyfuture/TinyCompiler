@@ -8,8 +8,8 @@ from pydantic import BaseModel
 class CoreConfig(BaseModel):
     xbar_cell_bit: int = 2
     xbar_size: Tuple[int, int] = (128, 128)
-    xbar_cnt: int = 1024
-    local_buffer_size: int = 64 * 1024  # 64KByte
+    xbar_cnt: int = 128
+    local_buffer_size: int = 128 * 1024  # 64KByte
 
 
 class Core:
@@ -26,6 +26,7 @@ class Core:
 
         from TinyGraph.MachineOps import MachineOp
         self.machine_op_list: List[MachineOp] = []
+        self.inst_list = []
         self.dummy_inst = []
 
         self.xbar_allocator = XbarAllocator(self.core_config.xbar_cnt)
@@ -39,6 +40,15 @@ class Core:
             return cls.id_map[core_id]
         return None
 
+    def inst_code_gen(self):
+        for index,op in enumerate(self.machine_op_list):
+            inst = op.lower_to_inst()
+            if isinstance(inst,list):
+                self.inst_list.extend(inst)
+            else:
+                self.inst_list.append(inst)
+
+
 
 class ChipConfig(BaseModel):
     core_cnt: int = 128
@@ -46,7 +56,7 @@ class ChipConfig(BaseModel):
     dram_size: int = 1024 * 1024 * 1024
     core_config: CoreConfig = CoreConfig()
 
-    mapping_strategy: str = "utilization"
+    mapping_strategy: str = "performance"
 
 
 class Chip:
@@ -64,6 +74,10 @@ class Chip:
 
         # 为实现 mapping 需要记录的变量
         self.next_mapping_index = 0  # 每次都是从这个index开始，向后查找能mapping的 core
+
+    def inst_code_gen(self):
+        for core in self.core_array:
+            core.inst_code_gen()
 
     def mapping_matrix_to_core(self, matrix_shape: Tuple[int, int]):
         xbar_cell_bit = self.chip_config.core_config.xbar_cell_bit
@@ -104,7 +118,7 @@ class Chip:
             if self.next_mapping_index >= self.chip_config.core_cnt:
                 return None
 
-        return assigned_cnt
+        return assign_list
 
     def utilization_first_mapping(self, group_cnt: int, xbar_cnt_per_group: int):
         # 返回 core id 和 xbar group id 的 list
@@ -242,11 +256,14 @@ class MemoryAllocator:
 
     def free(self, addr: int):
         # 释放相应的内存地址
+        is_freed = False
         for index, node in enumerate(self.memory_blocks):
             memory_block = node.payload
             if memory_block.start_addr == addr:
                 memory_block.allocated = False
                 self.allocated_size -= (memory_block.end_addr - memory_block.start_addr)
+                is_freed = True
+        assert is_freed
 
     def merge_free_blocks(self):
         prev_node = None

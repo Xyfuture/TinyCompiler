@@ -39,10 +39,26 @@ topo_node_list = topo_sort(graph)
 
 # lower to machine op
 
+print('start')
+for node in topo_node_list:
+    print(node.micro_op.full_info())
+print('end')
+
 for node in topo_node_list:
     node.micro_op.machine_op_gen()
 
+
 # lower to inst
+
+#
+# for index,machine_op in enumerate(chip.core_array[0].machine_op_list):
+#     print(f"{index} : {machine_op}")
+# print('all machine ops')
+#
+
+
+
+chip.inst_code_gen()
 
 
 print("pass")

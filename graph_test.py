@@ -35,7 +35,7 @@ print(len(graph.nodes))
 # for node in graph.nodes:
 #     node.check_connection()
 
-node_list = STARS-133(graph)
+node_list = (graph)
 
 print(len(node_list))
 
