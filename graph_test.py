@@ -35,7 +35,7 @@ print(len(graph.nodes))
 # for node in graph.nodes:
 #     node.check_connection()
 
-node_list = (graph)
+node_list = topo_sort(graph)
 
 print(len(node_list))
 
