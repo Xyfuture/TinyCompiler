@@ -38,6 +38,9 @@ class TransferOp(MicroOp):
         self.src_core_id = src_core_id
         self.dst_core_id = dst_core_id
 
+        # if self.op_id == 5244:
+        #     print('here')
+
         # self.src_op = src_op
 
     def machine_op_gen(self):
@@ -104,6 +107,8 @@ class TransferOp(MicroOp):
 
 
 class MatVecMulOp(MicroOp):
+    # 完成一个 xbar group 和 vector 的 运算
+    # vector 不一定是展开后的，需要手动展开
     def __init__(self, core_id: int, group_id: int, xbar_cnt:int, input_size: int, output_size: int,
                  src_ops: List[MicroOp], start_offset, end_offset, shr_manager_id: int = 0):
         super().__init__(core_id, output_size, src_ops, shr_manager_id)
@@ -148,7 +153,7 @@ class MatVecMulOp(MicroOp):
         return f"MatVecMulOp-{self.op_id}"
 
     def full_info(self):
-        return f"MatVecMulOp-{self.op_id} #src: {self.src_ops}"
+        return f"MatVecMulOp-{self.op_id} #src: {self.src_ops} #core: {self.core_id}"
 
 
 class MaxPool2dOp(MicroOp):

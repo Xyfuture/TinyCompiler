@@ -47,7 +47,7 @@ def graph_compile(chip: Chip, graph: MicroGraph, network: DepModule, input_shape
     network.mapping()
 
     # 运行 inference 得到 计算图
-    output_tensor = network(input_tensor)
+    output_tensor:DepTensor = network(input_tensor)
 
     # 运行一些pass
     for graph_pass in graph_passes:

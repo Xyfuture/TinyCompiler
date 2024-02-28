@@ -295,6 +295,17 @@ def topo_sort(graph: MicroGraph) -> List[MicroNode]:
             if dep_map[node] == 0:
                 pending_queue.append(node)
 
+    for k,v in dep_map.items():
+        if v != 0:
+            input_nodes = k._input_nodes
+            dep_input_nodes = []
+            for node in input_nodes:
+                if node not in sorted_nodes:
+                    dep_input_nodes.append(node)
+            print(f"{repr(k.micro_op)} -- {repr([mnode.micro_op for mnode in dep_input_nodes])}")
+    assert len(sorted_nodes) == len(dep_map)
+
+
     return sorted_nodes
 
 

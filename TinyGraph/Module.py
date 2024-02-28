@@ -1,4 +1,5 @@
 import copy
+from collections import OrderedDict
 from typing import Tuple, Dict
 
 import numpy as np
@@ -8,8 +9,29 @@ from TinyGraph.Kernel import _conv2d_kernel, _maxpool2d_kernel, _matrix_vec_mul_
 
 
 class DepModule:
+    id_counter = {}
+    base_name = "DepModule"
+
     def __init__(self):
-        self._module_dict: Dict[DepModule, None] = {}
+        self._module_dict: OrderedDict[str, DepModule] = OrderedDict()
+
+        self.module_id = self.id_counter.get(self.__class__,1)
+        self.id_counter[self.__class__] = self.module_id + 1
+
+    @property
+    def module_name(self):
+        return f"{self.base_name}_{self.module_id}"
+
+    def __str__(self):
+        inner_str = ""
+        for k,v in self._module_dict.items():
+            inner_str += f"self.{k} : {v}\n"
+        if str:
+            s = (f'{self.module_name} : [\n'
+                 f'{inner_str}]')
+        else:
+            s = f'{self.module_name}'
+        return s
 
     def forward(self, *args, **kwargs):
         pass
@@ -19,18 +41,20 @@ class DepModule:
 
     def __setattr__(self, name, value):
         if isinstance(value, DepModule):
-            self._module_dict.setdefault(value)
+            self._module_dict[name] = value
         super().__setattr__(name, value)
 
-    def _add_module_dict(self, module):
-        self._module_dict.setdefault(module)
+    def _add_module_dict(self,name, module):
+        self._module_dict[name] = module
 
     def mapping(self):
-        for module in self._module_dict:
+        for module in self._module_dict.values():
             module.mapping()
 
 
 class DepConv2d(DepModule):
+    base_name = "Conv2d"
+
     def __init__(self, in_channels: int, out_channels: int, kernel_size: Tuple[int, int],
                  stride: Tuple[int, int] = (1, 1),
                  padding: int = 0, bias: bool = True):
@@ -45,7 +69,7 @@ class DepConv2d(DepModule):
 
         self.weight_matrix_shape = (in_channels * kernel_size[0] * kernel_size[1], out_channels)
 
-        self.weight_matrix = MatrixVar(self.weight_matrix_shape, )
+        self.weight_matrix = MatrixVar(self.weight_matrix_shape, self)
         # self.weight_matrix.dummy_mapping()
 
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
@@ -61,6 +85,8 @@ class DepConv2d(DepModule):
 
 
 class DepMaxpool2d(DepModule):
+    base_name = "MaxPool2d"
+
     def __init__(self, kernel_size: Tuple[int, int], stride: Tuple[int, int], padding: int = 0):
         super().__init__()
         self.kernel_size = kernel_size
@@ -79,6 +105,8 @@ class DepMaxpool2d(DepModule):
 
 
 class DepLinear(DepModule):
+    base_name = "Linear"
+
     def __init__(self, in_features: int, out_features: int, bias: bool = True):
         super().__init__()
         self.in_features = in_features
@@ -86,7 +114,7 @@ class DepLinear(DepModule):
         self.bias = bias
 
         self.weight_matrix_shape = (in_features, out_features)
-        self.weight_matrix = MatrixVar(self.weight_matrix_shape, )
+        self.weight_matrix = MatrixVar(self.weight_matrix_shape, self)
         # self.weight_matrix.dummy_mapping()
 
     def forward(self, input_tensor: DepTensor, *args, **kwargs):
@@ -103,6 +131,8 @@ class DepLinear(DepModule):
 
 
 class DepElementAdd(DepModule):
+    base_name = "ElementAdd"
+
     def __init__(self):
         super().__init__()
 
@@ -115,6 +145,8 @@ class DepElementAdd(DepModule):
 
 
 class DepReLU(DepModule):
+    base_name = "ReLU"
+
     def __init__(self):
         super().__init__()
 
@@ -125,14 +157,17 @@ class DepReLU(DepModule):
 
 
 class DepSequential(DepModule):
+    base_name = "Sequential"
+
     def __init__(self, *args):
         super().__init__()
         self.layers = args
-        for layer in self.layers:
+        for index,layer in enumerate(self.layers):
             if isinstance(layer, DepModule):
-                self._add_module_dict(layer)
+                self._add_module_dict(str(index),layer)
 
     def forward(self, input_tensor: DepTensor):
         for layer in self.layers:
             input_tensor = layer(input_tensor)
         return input_tensor
+

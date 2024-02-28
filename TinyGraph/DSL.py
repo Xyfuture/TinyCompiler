@@ -12,21 +12,25 @@ from TinyGraph.MicroOps import TransferOp, PadOp
 
 
 class XbarGroupVar:
-    def __init__(self, xbar_group_shape: Tuple[int, int], core_id: int, group_id: int, xbar_cnt:int):
+    def __init__(self, xbar_group_shape: Tuple[int, int], core_id: int, group_id: int, xbar_cnt: int):
         self.core_id: int = core_id
         self.group_id = group_id
-        self.xbar_cnt = xbar_cnt # 该 group 中有几个xbar
+        self.xbar_cnt = xbar_cnt  # 该 group 中有几个xbar
 
         self.xbar_group_shape: Tuple[int, int] = xbar_group_shape
 
+    def __str__(self):
+        return f"XbarGroupVar - core:{self.core_id} group_id:{self.group_id} xbar_cnt:{self.xbar_cnt} xbar_group_shape:{self.xbar_group_shape}"
+
 
 class MatrixVar:
-    def __init__(self, matrix_shape: Tuple[int, int]):
+    def __init__(self, matrix_shape: Tuple[int, int],layer):
         self.matrix_shape = matrix_shape
 
         # 不是二维,只能是一维的
         self.xbar_group_array: List[XbarGroupVar] = []
 
+        self.layer = layer
         pass
 
     def mapping(self):
@@ -43,7 +47,7 @@ class MatrixVar:
             else:
                 cur_xbar_group_rows = xbar_rows
 
-            xbar_group = XbarGroupVar((cur_xbar_group_rows, matrix_cols), core_id, group_id,xbar_cnt_per_group)
+            xbar_group = XbarGroupVar((cur_xbar_group_rows, matrix_cols), core_id, group_id, xbar_cnt_per_group)
             self.xbar_group_array.append(xbar_group)
 
     def dummy_mapping(self):
@@ -51,10 +55,11 @@ class MatrixVar:
 
         self.xbar_group_array.append(XbarGroupVar(self.matrix_shape, core.core_id))
 
-    def mul_vector(self, src_vector: DepTensor):
-        # transfer the vector to the xbar core
-
-        pass
+    def __str__(self):
+        s = f"MatrixVar: shape: {self.matrix_shape} layer:{self.layer.module_name}\n"
+        for xbar_group in self.xbar_group_array:
+            s += str(xbar_group) + "\n"
+        return s
 
         # # make all vector data in the core
         # for index, position in np.ndenumerate(src_vector.tensor_position):
