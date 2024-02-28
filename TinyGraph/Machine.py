@@ -3,13 +3,14 @@ from __future__ import annotations
 from math import ceil
 from typing import List, Dict, Tuple, Optional
 from pydantic import BaseModel
+import json
 
 
 class CoreConfig(BaseModel):
     xbar_cell_bit: int = 2
     xbar_size: Tuple[int, int] = (128, 128)
-    xbar_cnt: int = 128
-    local_buffer_size: int = 128 * 1024  # 64KByte
+    xbar_cnt: int = 64
+    local_buffer_size: int = 128 * 1024  # 128KByte
 
 
 class Core:
@@ -26,7 +27,7 @@ class Core:
 
         from TinyGraph.MachineOps import MachineOp
         self.machine_op_list: List[MachineOp] = []
-        self.inst_list = []
+        self.inst_list:List[Dict] = []
         self.dummy_inst = []
 
         self.xbar_allocator = XbarAllocator(self.core_config.xbar_cnt)
@@ -51,9 +52,8 @@ class Core:
 
 
 class ChipConfig(BaseModel):
-    core_cnt: int = 128
-    global_buffer_size: int = 1204 * 1024  # 1MByte
-    dram_size: int = 1024 * 1024 * 1024
+    core_cnt: int = 64
+    dram_size: int = 1024 * 1024 * 1024 # 1GB
     core_config: CoreConfig = CoreConfig()
 
     mapping_strategy: str = "performance"
@@ -78,6 +78,13 @@ class Chip:
     def inst_code_gen(self):
         for core in self.core_array:
             core.inst_code_gen()
+
+    def dump_inst_to_file(self,file_path:str):
+        for core in self.core_array:
+            with open(file_path + f'core_{core.core_id}.json',"w") as f:
+                json_data = json.dumps(core.inst_list, separators=(',', ': '))
+                json_data = json_data.replace('},', '},\n')
+                f.write(json_data)
 
     def mapping_matrix_to_core(self, matrix_shape: Tuple[int, int]):
         xbar_cell_bit = self.chip_config.core_config.xbar_cell_bit
