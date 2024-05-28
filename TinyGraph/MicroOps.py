@@ -59,15 +59,15 @@ class TransferOp(MicroOp):
             #     assert False
 
             src_micro_op = self.src_ops[0]
-            while isinstance(src_micro_op,TransferOp):
+            while isinstance(src_micro_op, TransferOp):
                 src_micro_op = src_micro_op.src_ops[0]
 
-
-            src_machine_op = MachineTransferOp(self.src_core_id, 'send', [src_micro_op.output_machine_op], None)
+            src_machine_op = MachineTransferOp(self.src_core_id, 'send', [src_micro_op.output_machine_op], None,
+                                               dst_core_id=self.dst_core_id)
             src_core.machine_op_list.append(src_machine_op)
 
             output_manager = self.get_core_address_manager()
-            dst_machine_op = MachineTransferOp(self.dst_core_id, 'recv', [], output_manager)
+            dst_machine_op = MachineTransferOp(self.dst_core_id, 'recv', [], output_manager,src_core_id=self.src_core_id)
             self.output_machine_op = dst_machine_op
             dst_core.machine_op_list.append(dst_machine_op)
 
@@ -109,7 +109,7 @@ class TransferOp(MicroOp):
 class MatVecMulOp(MicroOp):
     # 完成一个 xbar group 和 vector 的 运算
     # vector 不一定是展开后的，需要手动展开
-    def __init__(self, core_id: int, group_id: int, xbar_cnt:int, input_size: int, output_size: int,
+    def __init__(self, core_id: int, group_id: int, xbar_cnt: int, input_size: int, output_size: int,
                  src_ops: List[MicroOp], start_offset, end_offset, shr_manager_id: int = 0):
         super().__init__(core_id, output_size, src_ops, shr_manager_id)
 
@@ -120,8 +120,8 @@ class MatVecMulOp(MicroOp):
         self.input_size = input_size
         self.output_size = output_size
 
-        self.start_offset = start_offset # 起始的偏移 与第一个 input op 输出的地址相比
-        self.end_offset = end_offset # 结束时应该读取的地址长度  从最后一个 input op的输出地址开始应该读取的地址长度
+        self.start_offset = start_offset  # 起始的偏移 与第一个 input op 输出的地址相比
+        self.end_offset = end_offset  # 结束时应该读取的地址长度  从最后一个 input op的输出地址开始应该读取的地址长度
 
     def machine_op_gen(self):
         core = Core.get_core_by_id(self.core_id)
@@ -134,7 +134,7 @@ class MatVecMulOp(MicroOp):
         reshape_output_manager = AddressManager(self.input_size, core.memory_allocator)
         # 添加reshape 的offset信息,修正读的范围
         reshape_machine_op = MachineRearrangeOp(self.core_id, input_machine_ops, reshape_output_manager,
-                                                self.start_offset,self.end_offset)
+                                                self.start_offset, self.end_offset)
         core.machine_op_list.append(reshape_machine_op)
 
         # 执行矩阵操作
@@ -198,7 +198,7 @@ class PadOp(MicroOp):
 
     def machine_op_gen(self):
         # TODO 修改这个 因为不知道core id  可以通过添加Pass的方式实现core id的读取
-        if self.core_id < 0 :
+        if self.core_id < 0:
             return
         core = Core.get_core_by_id(self.core_id)
         output_manager = AddressManager(self.vector_size, core.memory_allocator)
@@ -302,17 +302,15 @@ def pad_to_core(graph: MicroGraph):
                 if user_core_id in user_core_map:
                     # 当前 new_node 已经被创建，因此直接更改就可以了
                     new_pad_node = user_core_map[user_core_id]
-                    user_node.replace_input_with(node,new_pad_node)
+                    user_node.replace_input_with(node, new_pad_node)
                 else:
-                    new_pad_op = PadOp(user_core_id,micro_op.vector_size,micro_op.shr_manager_id)
+                    new_pad_op = PadOp(user_core_id, micro_op.vector_size, micro_op.shr_manager_id)
                     # pad op 不需要任何的input node 所以可以直接的创建
                     # create node method 也可以被替换掉，直接手动添加
-                    new_pad_node = MicroGraph.current_graph.create_node([],new_pad_op)
+                    new_pad_node = MicroGraph.current_graph.create_node([], new_pad_op)
 
                     # 将user的input_nodes 进行替换
-                    user_node.replace_input_with(node,new_pad_node)
+                    user_node.replace_input_with(node, new_pad_node)
 
                     # 更新 user_core_map
                     user_core_map[user_core_id] = new_pad_node
-
-

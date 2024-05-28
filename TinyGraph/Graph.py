@@ -10,7 +10,7 @@ from TinyGraph.MachineOps import MachineOp, SharedAddressManager, AddressManager
 class MicroOp:
     id_counter = {}
 
-    def __init__(self, core_id: int = -1, vector_size: int = 0, src_ops: Union[List[MicroOp],MicroOp,None] = None,
+    def __init__(self, core_id: int = -1, vector_size: int = 0, src_ops: Union[List[MicroOp], MicroOp, None] = None,
                  shr_manager_id: int = 0):
         self.op_id = MicroOp.id_counter.get(self.__class__, 1)
         MicroOp.id_counter[self.__class__] = self.op_id + 1
@@ -22,7 +22,7 @@ class MicroOp:
         self.shr_manager_id = shr_manager_id
 
         if src_ops:  # 这个机制可能还要修改,暂时暂时没想好应该怎么动 ...
-            if isinstance(src_ops,List):
+            if isinstance(src_ops, List):
                 self.src_ops = src_ops
             else:
                 self.src_ops = [src_ops]
@@ -134,7 +134,7 @@ class MicroNode:
             # node.__remove_input_node(self)
             # node.__add_input_node(replace_with)
 
-            node.__replace_input_with(self,replace_with)
+            node.__replace_input_with(self, replace_with)
 
         return [node for node in to_process if node not in skipped]
 
@@ -143,7 +143,7 @@ class MicroNode:
         append_with.__add_input_node(self)
 
     def replace_input_with(self, old_input: MicroNode, new_input: MicroNode):
-        self.__replace_input_with(old_input,new_input)
+        self.__replace_input_with(old_input, new_input)
 
     def __update_input_nodes(self, new_input_nodes: List[MicroNode]):
         """
@@ -171,11 +171,11 @@ class MicroNode:
         to_add._output_nodes.setdefault(self)
         self._input_nodes.setdefault(to_add)
 
-    def __replace_input_with(self,old_input:MicroNode,new_input:MicroNode):
+    def __replace_input_with(self, old_input: MicroNode, new_input: MicroNode):
         # 替换 micro node的同时实现 micro op中 src op的替换工作
         # 替换 src op
         old_micro_op = old_input.micro_op
-        for index,src_op in enumerate(self.micro_op.src_ops):
+        for index, src_op in enumerate(self.micro_op.src_ops):
             if src_op == old_micro_op:
                 self.micro_op.src_ops[index] = new_input.micro_op
         # 替换 micro node
@@ -263,6 +263,10 @@ class MicroGraph:
         self._node_creator.set_graph_creator_in_context('sequential')
         return self._node_creator
 
+    def use_simple_node_dep(self):
+        self._node_creator.set_graph_creator_in_context("simple")
+        return self._node_creator
+
     def erase_node(self, node: MicroNode):
         # 确保没有其他节点使用该node
         if len(node.all_output_nodes) > 0:
@@ -295,7 +299,7 @@ def topo_sort(graph: MicroGraph) -> List[MicroNode]:
             if dep_map[node] == 0:
                 pending_queue.append(node)
 
-    for k,v in dep_map.items():
+    for k, v in dep_map.items():
         if v != 0:
             input_nodes = k._input_nodes
             dep_input_nodes = []
@@ -303,8 +307,8 @@ def topo_sort(graph: MicroGraph) -> List[MicroNode]:
                 if node not in sorted_nodes:
                     dep_input_nodes.append(node)
             print(f"{repr(k.micro_op)} -- {repr([mnode.micro_op for mnode in dep_input_nodes])}")
-    assert len(sorted_nodes) == len(dep_map)
 
+    assert len(sorted_nodes) == len(dep_map)
 
     return sorted_nodes
 
