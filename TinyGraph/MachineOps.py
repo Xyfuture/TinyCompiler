@@ -86,11 +86,12 @@ class MachineOp:
             self.output_manager.free()
 
     def before_code_gen(self):
+        # 申请用于输出的内存空间
         if self.output_manager:
             self.output_manager.malloc()
 
     def after_code_gen(self):
-        # 释放依赖关系
+        # 释放依赖关系 同时 释放内存空间
         for input_op in self.input_ops:
             input_op._user_count -= 1
             if input_op._user_count == 0:

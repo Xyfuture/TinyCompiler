@@ -69,5 +69,10 @@ chip.inst_code_gen()
 #     print(f"{index} : {machine_op}")
 # print('all machine ops')
 
+chip.dump_output_to_file("./inst/")
+
+
+usage,used_xbar_cnt,total_xbar_cnt = chip.get_xbar_usage()
+print(f'usage: {usage}')    
 
 print("pass")

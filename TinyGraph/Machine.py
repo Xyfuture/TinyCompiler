@@ -7,10 +7,12 @@ import json
 
 
 class CoreConfig(BaseModel):
-    xbar_cell_bit: int = 2
-    xbar_size: Tuple[int, int] = (128, 128)
+    xbar_cell_bit: int = 1
+    xbar_size: Tuple[int, int] = (256, 256)
     xbar_cnt: int = 64
     local_buffer_size: int = 128 * 1024  # 128KByte
+
+    weight_precision: int = 16  # bits
 
 
 class Core:
@@ -27,7 +29,7 @@ class Core:
 
         from TinyGraph.MachineOps import MachineOp
         self.machine_op_list: List[MachineOp] = []
-        self.inst_list:List[Dict] = []
+        self.inst_list: List[Dict] = []
         self.dummy_inst = []
 
         self.xbar_allocator = XbarAllocator(self.core_config.xbar_cnt)
@@ -42,18 +44,17 @@ class Core:
         return None
 
     def inst_code_gen(self):
-        for index,op in enumerate(self.machine_op_list):
+        for index, op in enumerate(self.machine_op_list):
             inst = op.lower_to_inst()
-            if isinstance(inst,list):
+            if isinstance(inst, list):
                 self.inst_list.extend(inst)
             else:
                 self.inst_list.append(inst)
 
 
-
 class ChipConfig(BaseModel):
     core_cnt: int = 64
-    dram_size: int = 1024 * 1024 * 1024 # 1GB
+    dram_size: int = 1024 * 1024 * 1024  # 1GB
     core_config: CoreConfig = CoreConfig()
 
     mapping_strategy: str = "performance"
@@ -79,12 +80,32 @@ class Chip:
         for core in self.core_array:
             core.inst_code_gen()
 
-    def dump_inst_to_file(self,file_path:str):
+    def dump_inst_to_file(self, file_path: str):
         for core in self.core_array:
-            with open(file_path + f'core_{core.core_id}.json',"w") as f:
+            with open(file_path + f'core_{core.core_id}.json', "w") as f:
                 json_data = json.dumps(core.inst_list, separators=(',', ': '))
-                json_data = json_data.replace('},', '},\n')
                 f.write(json_data)
+
+    def dump_output_to_file(self, file_path: str):
+        # 生成mapping 信息,报告利用率
+        mapping_dict: Dict[int, Dict[int, int]] = {}
+
+        for core in self.core_array:
+            core_xbar_mapping_dict = core.xbar_allocator.xbar_group_id_cnt_map
+            mapping_dict[core.core_id] = core_xbar_mapping_dict
+
+        # 生成指令信息
+        inst_dict: Dict[int, List[Dict]] = {}
+
+        for core in self.core_array:
+            inst_dict[core.core_id] = core.inst_list
+
+        output_dict = {"mapping": mapping_dict, "inst": inst_dict}
+        # 写入到文件中
+        with open(file_path + f'all_inst.json', 'w') as f:
+            json_data = json.dumps(output_dict, separators=(',', ':'))
+            json_data = json_data.replace('},', '},\n')
+            f.write(json_data)
 
     def mapping_matrix_to_core(self, matrix_shape: Tuple[int, int]):
         xbar_cell_bit = self.chip_config.core_config.xbar_cell_bit
@@ -94,7 +115,8 @@ class Chip:
 
         matrix_rows, matrix_cols = matrix_shape
 
-        xbar_cnt_per_group = ceil((matrix_cols * 8 / xbar_cell_bit) / xbar_cols)
+        xbar_cnt_per_group = ceil(
+            (matrix_cols * self.chip_config.core_config.weight_precision / xbar_cell_bit) / xbar_cols)
         group_cnt = ceil(matrix_rows / xbar_rows)
 
         # assign_list: List[Tuple[int, int]] = []  # (core_id,group_id)
@@ -105,6 +127,16 @@ class Chip:
             return self.performance_first_mapping(group_cnt, xbar_cnt_per_group)
 
         return None
+
+    def get_xbar_usage(self):
+        used_xbar_cnt = 0
+        total_xbar_cnt = 0
+
+        for core in self.core_array:
+            total_xbar_cnt += core.xbar_allocator.xbar_cnt
+            used_xbar_cnt += core.xbar_allocator.xbar_cnt - core.xbar_allocator.empty_xbar_cnt
+
+        return used_xbar_cnt / total_xbar_cnt, used_xbar_cnt, total_xbar_cnt
 
     # 如何分配新的核
     def performance_first_mapping(self, group_cnt: int, xbar_cnt_per_group: int):
@@ -295,6 +327,7 @@ class XbarAllocator:
     def __init__(self, xbar_cnt: int):
         self.xbar_cnt = xbar_cnt
         self.xbar_group_cnt = 0
+        self.xbar_group_id_cnt_map: Dict[int, int] = {}  # 映射 xbar_group_id 到 该group xbar_cnt 的一个映射
         self.xbar_group_id_addr_map: Dict[int, int] = {}  # 映射 xbar_group_id 到 其在 memory_allocator中的地址
 
         self.allocator = MemoryAllocator(xbar_cnt)
@@ -307,6 +340,7 @@ class XbarAllocator:
         addr = self.allocator.malloc(request_xbar_cnt)
         if addr is not None:
             self.xbar_group_id_addr_map[self.xbar_group_cnt] = addr
+            self.xbar_group_id_cnt_map[self.xbar_group_cnt] = request_xbar_cnt
             xbar_group_id = self.xbar_group_cnt
             self.xbar_group_cnt += 1
             return xbar_group_id

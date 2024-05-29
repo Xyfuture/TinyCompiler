@@ -38,7 +38,8 @@ class MatrixVar:
         xbar_cell_bit = Chip.current_chip.chip_config.core_config.xbar_cell_bit
         matrix_rows, matrix_cols = self.matrix_shape
 
-        xbar_cnt_per_group = ceil((matrix_cols * 8 / xbar_cell_bit) / xbar_cols)
+        weight_precision = Chip.current_chip.chip_config.core_config.weight_precision
+        xbar_cnt_per_group = ceil((matrix_cols * weight_precision / xbar_cell_bit) / xbar_cols)
 
         assign_list = Chip.current_chip.mapping_matrix_to_core(self.matrix_shape)
         for index, (core_id, group_id) in enumerate(assign_list):
