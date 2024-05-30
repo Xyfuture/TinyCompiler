@@ -39,10 +39,11 @@ topo_node_list = topo_sort(graph)
 
 # lower to machine op
 
-print('start')
-for node in topo_node_list:
-    print(node.micro_op.full_info())
-print('end')
+# 输出 micro op的信息
+# print('start')
+# for node in topo_node_list:
+#     print(node.micro_op.full_info())
+# print('end')
 
 for node in topo_node_list:
     node.micro_op.machine_op_gen()
@@ -73,6 +74,6 @@ chip.dump_output_to_file("./inst/")
 
 
 usage,used_xbar_cnt,total_xbar_cnt = chip.get_xbar_usage()
-print(f'usage: {usage}')    
+print(f'usage: {usage}')
 
 print("pass")

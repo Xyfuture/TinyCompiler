@@ -15,6 +15,14 @@ class CoreConfig(BaseModel):
     weight_precision: int = 16  # bits
 
 
+class ChipConfig(BaseModel):
+    core_cnt: int = 64
+    offchip_memory_size: int = 1024 * 1024 * 1024  # 1GB
+    core_config: CoreConfig = CoreConfig()
+
+    mapping_strategy: str = "performance"
+
+
 class Core:
     id_counter: int = 0
     id_map: Dict[int, Core] = {}
@@ -52,13 +60,6 @@ class Core:
                 self.inst_list.append(inst)
 
 
-class ChipConfig(BaseModel):
-    core_cnt: int = 64
-    dram_size: int = 1024 * 1024 * 1024  # 1GB
-    core_config: CoreConfig = CoreConfig()
-
-    mapping_strategy: str = "performance"
-
 
 class Chip:
     current_chip: Optional[Chip] = None
@@ -71,7 +72,7 @@ class Chip:
         for i in range(self.chip_config.core_cnt):
             self.core_array.append(Core(self.chip_config.core_config))
 
-        self.dram_allocator = MemoryAllocator(self.chip_config.dram_size)
+        self.dram_allocator = MemoryAllocator(self.chip_config.offchip_memory_size)
 
         # 为实现 mapping 需要记录的变量
         self.next_mapping_index = 0  # 每次都是从这个index开始，向后查找能mapping的 core
