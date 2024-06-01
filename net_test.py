@@ -1,10 +1,10 @@
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
-from TinyGraph.Graph import MicroGraph, MicroNode, topo_sort
+from TinyGraph.Graph import MicroGraph, topo_sort
 from TinyGraph.Machine import Chip, ChipConfig
 from TinyGraph.MicroOps import RawInputOp, pad_to_core
-from TinyGraph.Module import DepSequential, DepModule, DepConv2d, DepLinear
-from resnet18 import resnet18
+from TinyGraph.Module import DepModule, DepConv2d, DepLinear
+from Networks.resnet18 import resnet18
 
 chip_config = ChipConfig()
 chip = Chip(chip_config)

@@ -10,7 +10,7 @@ class CoreConfig(BaseModel):
     xbar_cell_bit: int = 1
     xbar_size: Tuple[int, int] = (256, 256)
     xbar_cnt: int = 64
-    local_buffer_size: int = 128 * 1024  # 128KByte
+    local_buffer_size: int = 1024 * 1024  # 1 MBytes
 
     weight_precision: int = 16  # bits
 
@@ -89,17 +89,17 @@ class Chip:
 
     def dump_output_to_file(self, file_path: str):
         # 生成mapping 信息,报告利用率
-        mapping_dict: Dict[int, Dict[int, int]] = {}
+        mapping_dict: Dict[str, Dict[int, int]] = {}
 
         for core in self.core_array:
             core_xbar_mapping_dict = core.xbar_allocator.xbar_group_id_cnt_map
-            mapping_dict[core.core_id] = core_xbar_mapping_dict
+            mapping_dict[f'core_{core.core_id}'] = core_xbar_mapping_dict
 
         # 生成指令信息
-        inst_dict: Dict[int, List[Dict]] = {}
+        inst_dict: Dict[str, List[Dict]] = {}
 
         for core in self.core_array:
-            inst_dict[core.core_id] = core.inst_list
+            inst_dict[f'core_{core.core_id}'] = core.inst_list
 
         output_dict = {"mapping": mapping_dict, "inst": inst_dict}
         # 写入到文件中

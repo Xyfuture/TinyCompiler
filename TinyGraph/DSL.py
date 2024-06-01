@@ -103,6 +103,8 @@ class DepTensor:
 
         # tensor_shape expect to be tuple
         # may be int will be passed in
+
+        # input will be viewed as 8bit
         self.reduced_dim_size = reduced_dim_size
 
         if tensor_op is not None:
