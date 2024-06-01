@@ -103,7 +103,7 @@ class Chip:
 
         output_dict = {"mapping": mapping_dict, "inst": inst_dict}
         # 写入到文件中
-        with open(file_path + f'all_inst.json', 'w') as f:
+        with open(file_path, 'w') as f:
             json_data = json.dumps(output_dict, separators=(',', ':'))
             json_data = json_data.replace('},', '},\n')
             f.write(json_data)
