@@ -280,6 +280,11 @@ class MicroGraph:
         self._len -= 1
         node._input_nodes = {}
 
+    def lower_to_machine_op(self):
+        topo_node_list = topo_sort(self)
+        for node in topo_node_list:
+            node.micro_op.machine_op_gen()
+
 
 def topo_sort(graph: MicroGraph) -> List[MicroNode]:
     sorted_nodes: List[MicroNode] = []

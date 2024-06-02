@@ -155,6 +155,10 @@ class DepTensor:
     def flat(self):
         return zip(self.tensor_op.flat(), self.tensor_position.flat())
 
+    def index(self):
+        # 借用 numpy 的 index实现这个功能
+        return np.ndindex(self.shape)
+
     def move_to(self, core_id: int):
         for index, position in self.tensor_position.enum():
             if position == core_id:

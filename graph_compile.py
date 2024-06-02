@@ -62,7 +62,7 @@ def graph_compile(chip: Chip, graph: MicroGraph, network: DepModule, input_shape
         node.micro_op.machine_op_gen()
 
     # machine op lower to final inst
-    chip.inst_code_gen()
+    chip.lower_to_inst()
 
     print('pass')
 

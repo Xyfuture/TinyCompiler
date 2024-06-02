@@ -64,7 +64,7 @@ def get_mapping_status(network: DepModule):
 print(get_mapping_status(net))
 
 # lower to inst
-chip.inst_code_gen()
+chip.lower_to_inst()
 
 # for index,machine_op in enumerate(chip.core_array[0].machine_op_list):
 #     print(f"{index} : {machine_op}")

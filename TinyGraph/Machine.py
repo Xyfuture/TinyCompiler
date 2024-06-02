@@ -6,10 +6,14 @@ from pydantic import BaseModel
 import json
 
 
-class CoreConfig(BaseModel):
+class XbarArrayConfig(BaseModel):
     xbar_cell_bit: int = 1
     xbar_size: Tuple[int, int] = (256, 256)
-    xbar_cnt: int = 64
+
+
+class CoreConfig(BaseModel):
+    xbar_array:XbarArrayConfig = XbarArrayConfig()
+    xbar_array_cnt: int = 64
     local_buffer_size: int = 1024 * 1024  # 1 MBytes
 
     weight_precision: int = 16  # bits
@@ -40,7 +44,7 @@ class Core:
         self.inst_list: List[Dict] = []
         self.dummy_inst = []
 
-        self.xbar_allocator = XbarAllocator(self.core_config.xbar_cnt)
+        self.xbar_allocator = XbarAllocator(self.core_config.xbar_array_cnt)
 
     def assign_group(self, request_xbar_cnt: int):
         return self.xbar_allocator.assign_xbar_group(request_xbar_cnt)
@@ -77,7 +81,7 @@ class Chip:
         # 为实现 mapping 需要记录的变量
         self.next_mapping_index = 0  # 每次都是从这个index开始，向后查找能mapping的 core
 
-    def inst_code_gen(self):
+    def lower_to_inst(self):
         for core in self.core_array:
             core.inst_code_gen()
 
