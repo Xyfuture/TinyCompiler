@@ -22,9 +22,13 @@ class XbarGroupVar:
     def __str__(self):
         return f"XbarGroupVar - core:{self.core_id} group_id:{self.group_id} xbar_cnt:{self.xbar_cnt} xbar_group_shape:{self.xbar_group_shape}"
 
+    def report_mapping(self)->str:
+        s = f'==> Core:{self.core_id} Group ID:{self.group_id} | Xbar Count:{self.xbar_cnt} Shape:{self.xbar_group_shape}'
+        return s
+
 
 class MatrixVar:
-    def __init__(self, matrix_shape: Tuple[int, int],layer):
+    def __init__(self, matrix_shape: Tuple[int, int], layer):
         self.matrix_shape = matrix_shape
 
         # 不是二维,只能是一维的
@@ -34,8 +38,8 @@ class MatrixVar:
         pass
 
     def mapping(self):
-        xbar_rows, xbar_cols = Chip.current_chip.chip_config.core_config.xbar_size
-        xbar_cell_bit = Chip.current_chip.chip_config.core_config.xbar_cell_bit
+        xbar_rows, xbar_cols = Chip.current_chip.chip_config.core_config.xbar_array.xbar_size
+        xbar_cell_bit = Chip.current_chip.chip_config.core_config.xbar_array.xbar_cell_bit
         matrix_rows, matrix_cols = self.matrix_shape
 
         weight_precision = Chip.current_chip.chip_config.core_config.weight_precision
@@ -51,10 +55,13 @@ class MatrixVar:
             xbar_group = XbarGroupVar((cur_xbar_group_rows, matrix_cols), core_id, group_id, xbar_cnt_per_group)
             self.xbar_group_array.append(xbar_group)
 
-    def dummy_mapping(self):
-        core = Core()
 
-        self.xbar_group_array.append(XbarGroupVar(self.matrix_shape, core.core_id))
+    def report_mapping(self) -> str:
+        s = f"Weight Shape: {self.matrix_shape}\n"
+        for i,xbar_group in enumerate(self.xbar_group_array):
+            s += f"XbarGroup-{i} {xbar_group.report_mapping()}\n"
+
+        return s
 
     def __str__(self):
         s = f"MatrixVar: shape: {self.matrix_shape} layer:{self.layer.module_name}\n"

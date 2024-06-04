@@ -3,7 +3,7 @@ from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
 from TinyGraph.Machine import Chip, ChipConfig
 from TinyGraph.MicroOps import RawInputOp, pad_to_core
-from TinyGraph.Module import DepModule, DepConv2d, DepLinear
+from TinyGraph.Module import DepModule, DepConv2d, DepLinear, report_mapping_status
 from Networks.resnet18 import resnet18
 
 chip_config = ChipConfig()
@@ -61,7 +61,9 @@ def get_mapping_status(network: DepModule):
     return s
 
 
-print(get_mapping_status(net))
+# print(get_mapping_status(net))
+
+print(report_mapping_status(network=net))
 
 # lower to inst
 chip.lower_to_inst()
@@ -70,7 +72,7 @@ chip.lower_to_inst()
 #     print(f"{index} : {machine_op}")
 # print('all machine ops')
 
-chip.dump_output_to_file("./inst/")
+chip.dump_output_to_file("./inst/tmp.json")
 
 
 usage,used_xbar_cnt,total_xbar_cnt = chip.get_xbar_usage()

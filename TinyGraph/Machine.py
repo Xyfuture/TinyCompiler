@@ -113,8 +113,8 @@ class Chip:
             f.write(json_data)
 
     def mapping_matrix_to_core(self, matrix_shape: Tuple[int, int]):
-        xbar_cell_bit = self.chip_config.core_config.xbar_cell_bit
-        xbar_size = self.chip_config.core_config.xbar_size
+        xbar_cell_bit = self.chip_config.core_config.xbar_array.xbar_cell_bit
+        xbar_size = self.chip_config.core_config.xbar_array.xbar_size
 
         xbar_rows, xbar_cols = xbar_size
 

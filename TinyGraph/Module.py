@@ -15,7 +15,7 @@ class DepModule:
     def __init__(self):
         self._module_dict: OrderedDict[str, DepModule] = OrderedDict()
 
-        self.module_id = self.id_counter.get(self.__class__,1)
+        self.module_id = self.id_counter.get(self.__class__, 1)
         self.id_counter[self.__class__] = self.module_id + 1
 
     @property
@@ -24,7 +24,7 @@ class DepModule:
 
     def __str__(self):
         inner_str = ""
-        for k,v in self._module_dict.items():
+        for k, v in self._module_dict.items():
             inner_str += f"self.{k} : {v}\n"
         if str:
             s = (f'{self.module_name} : [\n'
@@ -44,12 +44,30 @@ class DepModule:
             self._module_dict[name] = value
         super().__setattr__(name, value)
 
-    def _add_module_dict(self,name, module):
+    def _add_module_dict(self, name, module):
         self._module_dict[name] = module
 
     def mapping(self):
         for module in self._module_dict.values():
             module.mapping()
+
+
+def report_mapping_status(network: DepModule):
+    s = ""
+    for module in network._module_dict.values():
+        if isinstance(module, DepConv2d):
+            s += (f'Module Name: {module.module_name}\n'
+                  f'{module.report_mapping()}\n\n')
+        elif isinstance(module, DepLinear):
+            s += (f'Module Name: {module.module_name}:\n'
+                  f'{module.report_mapping()}\n\n')
+        else:
+            s += report_mapping_status(module)
+    return s
+
+
+def string_with_tab(s: str) -> str:
+    return '\n'.join('\t' + line for line in s.splitlines())
 
 
 class DepConv2d(DepModule):
@@ -82,6 +100,17 @@ class DepConv2d(DepModule):
         # do something
         self.weight_matrix.mapping()
         super().mapping()
+
+    def report_mapping(self) -> str:
+        s = (f"Module Info:\n"
+             f"\tIn Channels: {self.in_channels}\n"
+             f"\tOut Channels: {self.out_channels}"
+             f"\tKernel Size: {self.kernel_size}\n")
+
+        s += (f"Mapping Info:\n"
+              f"{string_with_tab(self.weight_matrix.report_mapping())}")
+
+        return s
 
 
 class DepMaxpool2d(DepModule):
@@ -129,6 +158,16 @@ class DepLinear(DepModule):
         self.weight_matrix.mapping()
         super().mapping()
 
+    def report_mapping(self):
+        s = (f"Module Info:\n"
+             f"\tIn Features: {self.in_features}\n"
+             f"\tOut Features: {self.out_features}\n")
+
+        s += (f"Mapping Info:\n"
+              f"{string_with_tab(self.weight_matrix.report_mapping())}")
+
+        return s
+
 
 class DepElementAdd(DepModule):
     base_name = "ElementAdd"
@@ -162,12 +201,11 @@ class DepSequential(DepModule):
     def __init__(self, *args):
         super().__init__()
         self.layers = args
-        for index,layer in enumerate(self.layers):
+        for index, layer in enumerate(self.layers):
             if isinstance(layer, DepModule):
-                self._add_module_dict(str(index),layer)
+                self._add_module_dict(str(index), layer)
 
     def forward(self, input_tensor: DepTensor):
         for layer in self.layers:
             input_tensor = layer(input_tensor)
         return input_tensor
-

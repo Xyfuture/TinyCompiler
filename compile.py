@@ -1,10 +1,12 @@
 import argparse
+
+from Networks.auto_encoder import AutoEncoder
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
 from TinyGraph.Machine import Chip, ChipConfig
 from TinyGraph.MicroOps import RawInputOp, pad_to_core
-from TinyGraph.Module import DepModule, DepConv2d, DepLinear
+from TinyGraph.Module import DepModule, DepConv2d, DepLinear, report_mapping_status
 from Networks.resnet18 import resnet18
 import json
 
@@ -15,9 +17,9 @@ parser = argparse.ArgumentParser(description='Compiler for CIM')
 parser.add_argument('--mapping', '-m', type=str, default='performance',
                     help='Mapping Strategy : performance or utilization')
 parser.add_argument('--config', '-c', type=str, default='example/resnet_config.json', help='Configuration File Path')
-parser.add_argument('--trace', '-t', type=str, default='', help='Trace File Path')
+parser.add_argument('--trace', '-t', type=str, default='example/resnet_trace.json', help='Trace File Path')
 parser.add_argument('--network', '-n', type=str, default='resnet', help='Network Name')
-parser.add_argument('--verbose', '-v', type=bool, action='store_true', help='Report All Module Results')
+parser.add_argument('--verbose', '-v', action='store_true', help='Report All Module Results')
 
 args = parser.parse_args()
 
@@ -26,13 +28,19 @@ def resnet_run():
     net = resnet18()
     net.mapping()
 
-    input_tensor = create_input_tensor((32, 32), 32)
+    input_tensor = create_input_tensor((32, 32), 3)
     output_tensor = net(input_tensor)
-    return output_tensor
+    return net
 
 
 def autoencoder_run():
-    pass
+    # TODO 测试
+    net = AutoEncoder()
+    net.mapping()
+
+    input_tensor = create_input_tensor((1,),1024)
+    output_tensor = net(input_tensor)
+    return net
 
 
 if __name__ == '__main__':
@@ -48,11 +56,18 @@ if __name__ == '__main__':
     Chip.current_chip = chip
 
     if args.network == 'resnet':
-        _ = resnet_run()
+        net = resnet_run()
     elif args.network == 'autoencoder':
         pass
     else:
         raise "Set your own network here"
+
+    # 输出mapping的结果
+    if args.verbose:
+        # 输出Mapping
+        print(report_mapping_status(net))
+
+
 
     # run some optimization pass
     pad_to_core(graph)
