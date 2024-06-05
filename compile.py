@@ -19,7 +19,7 @@ parser.add_argument('--mapping', '-m', type=str, default='performance',help='Map
 parser.add_argument('--config', '-c', type=str, default='example/resnet_config.json', help='Configuration File Path')
 parser.add_argument('--trace', '-t', type=str, default='example/resnet_trace.json', help='Trace File Path')
 parser.add_argument('--network', '-n', type=str, default='resnet', help='Network Name')
-parser.add_argument('--verbose', '-v', action='store_false', help='Report All Module Results')
+parser.add_argument('--verbose', '-v', action='store_true', help='Report All Module Results')
 
 args = parser.parse_args()
 
