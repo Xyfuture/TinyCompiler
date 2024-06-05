@@ -97,14 +97,15 @@ class DepConv2d(DepModule):
         return output_tensor
 
     def mapping(self):
-        # do something
+        # 将本层mapping 下去
         self.weight_matrix.mapping()
+        # 将module 中其他module也mapping 下去
         super().mapping()
 
     def report_mapping(self) -> str:
         s = (f"Module Info:\n"
              f"\tIn Channels: {self.in_channels}\n"
-             f"\tOut Channels: {self.out_channels}"
+             f"\tOut Channels: {self.out_channels}\n"
              f"\tKernel Size: {self.kernel_size}\n")
 
         s += (f"Mapping Info:\n"

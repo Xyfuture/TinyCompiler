@@ -84,5 +84,5 @@
         "read_latency": 8,
         "read_energy": 1.0
     },
-    "mapping_strategy": "performance"
+    "mapping_strategy": "utilization"
 }

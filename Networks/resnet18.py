@@ -3,6 +3,7 @@ from typing import Optional, List
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Module import DepModule
 from TinyGraph.Module import *
+from utils import create_input_tensor
 
 
 def conv1x1(in_planes: int, out_planes: int, stride: Tuple[int, int] = (1, 1)):
@@ -116,3 +117,7 @@ class ResNet(DepModule):
 
 def resnet18():
     return ResNet([2, 2, 2, 2], 10)
+
+
+def get_resnet18():
+    return resnet18(),create_input_tensor((32, 32), 3)

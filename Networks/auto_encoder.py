@@ -3,6 +3,7 @@ from typing import Optional, List
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Module import DepModule
 from TinyGraph.Module import *
+from utils import create_input_tensor
 
 
 class AutoEncoder(DepModule):
@@ -38,3 +39,7 @@ class AutoEncoder(DepModule):
         out = self.decoder(out)
 
         return out
+
+
+def get_autoencoder():
+    return AutoEncoder(), create_input_tensor((1,), 1024)

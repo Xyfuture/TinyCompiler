@@ -12,7 +12,7 @@ class XbarArrayConfig(BaseModel):
 
 
 class CoreConfig(BaseModel):
-    xbar_array:XbarArrayConfig = XbarArrayConfig()
+    xbar_array: XbarArrayConfig = XbarArrayConfig()
     xbar_array_cnt: int = 64
     local_buffer_size: int = 1024 * 1024  # 1 MBytes
 
@@ -64,7 +64,6 @@ class Core:
                 self.inst_list.append(inst)
 
 
-
 class Chip:
     current_chip: Optional[Chip] = None
 
@@ -92,7 +91,7 @@ class Chip:
                 f.write(json_data)
 
     def dump_output_to_file(self, file_path: str):
-        # 生成mapping 信息,报告利用率
+        # 生成mapping 信息,方便模拟器报告利用率
         mapping_dict: Dict[str, Dict[int, int]] = {}
 
         for core in self.core_array:
