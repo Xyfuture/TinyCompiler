@@ -61,6 +61,9 @@ if __name__ == '__main__':
             assert args.mapping in ['performance', 'utilization'], "Unsupported Mapping Strategy"
         chip_config.mapping_strategy = args.mapping
 
+    chip = Chip(chip_config)
+    Chip.current_chip = chip
+
     if args.network == 'resnet':
         net,input_tensor = get_resnet18()
     elif args.network == 'autoencoder':
