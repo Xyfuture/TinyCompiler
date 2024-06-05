@@ -15,7 +15,7 @@ from utils import create_input_tensor
 parser = argparse.ArgumentParser(description='Compiler for CIM')
 
 # 通过config 指定 mapping 方式
-# parser.add_argument('--mapping', '-m', type=str, default='performance',help='Mapping Strategy : performance or utilization')
+parser.add_argument('--mapping', '-m', type=str, default='performance',help='Mapping Strategy : performance or utilization')
 parser.add_argument('--config', '-c', type=str, default='example/resnet_config.json', help='Configuration File Path')
 parser.add_argument('--trace', '-t', type=str, default='example/resnet_trace.json', help='Trace File Path')
 parser.add_argument('--network', '-n', type=str, default='resnet', help='Network Name')
@@ -57,9 +57,9 @@ if __name__ == '__main__':
     with open(args.config) as f:
         config_dict = json.load(f)
         chip_config = ChipConfig(**config_dict)
-
-    chip = Chip(chip_config)
-    Chip.current_chip = chip
+        if __name__ == '__main__':
+            assert args.mapping in ['performance', 'utilization'], "Unsupported Mapping Strategy"
+        chip_config.mapping_strategy = args.mapping
 
     if args.network == 'resnet':
         net,input_tensor = get_resnet18()
