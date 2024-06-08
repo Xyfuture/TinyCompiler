@@ -1,6 +1,7 @@
 import argparse
 
 from Networks.auto_encoder import AutoEncoder, get_autoencoder
+from Networks.yolo import get_yolovgg
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
@@ -68,6 +69,8 @@ if __name__ == '__main__':
         net,input_tensor = get_resnet18()
     elif args.network == 'autoencoder':
         net,input_tensor = get_autoencoder()
+    elif args.network == 'yolo':
+        net,input_tensor = get_yolovgg()
     else:
         raise "Set your own network here"
 

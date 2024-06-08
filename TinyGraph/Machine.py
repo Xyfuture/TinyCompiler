@@ -130,7 +130,7 @@ class Chip:
         elif self.chip_config.mapping_strategy == 'performance':
             return self.performance_first_mapping(group_cnt, xbar_cnt_per_group)
 
-        return None
+        raise NotImplemented
 
     def get_xbar_usage(self):
         used_xbar_cnt = 0
@@ -175,8 +175,7 @@ class Chip:
                 assigned_cnt += 1
 
         if assigned_cnt != group_cnt:
-            return None
-
+            print("No Enough Xbars! Please use larger chip!")
         return assign_list
 
 
