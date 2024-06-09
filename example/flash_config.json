@@ -1,0 +1,88 @@
+{
+    "core_config": {
+        "input_precision": 8,
+        "weight_precision": 16,
+        "xbar_array": {
+            "xbar_size": [
+                1024,
+                1024
+            ],
+            "xbar_cell_bit": 2,
+            "dac_resolution": 1,
+            "dac_latency": 1,
+            "dac_energy": 1.0,
+            "dac_count": 256,
+            "xbar_latency": 30,
+            "xbar_read_energy": 1.0,
+            "sample_hold_latency": 1,
+            "sample_hold_energy": 1.0,
+            "adc_resolution": 1,
+            "adc_latency": 1,
+            "adc_energy": 1.0,
+            "adc_count": 1,
+            "shift_adder_latency": 1,
+            "shift_adder_energy": 1.0,
+            "input_buffer_latency": 1,
+            "input_buffer_energy": 1.0,
+            "output_buffer_latency": 1,
+            "output_buffer_energy": 1.0,
+            "pipeline_mode": true
+        },
+        "xbar_array_cnt": 16,
+        "vector_width": 32,
+        "vector_latency": 2,
+        "vector_energy": 1.0,
+        "local_buffer": {
+            "memory_size": 1048576,
+            "data_width": 32,
+            "write_latency": 10,
+            "write_energy": 1.0,
+            "read_latency": 8,
+            "read_energy": 1.0
+        },
+        "local_bus": {
+            "bus_topology": "shared",
+            "bus_width": 32,
+            "latency": 1,
+            "energy": 1.0,
+            "layout": null
+        },
+        "scalar_energy": 1.0,
+        "register_energy": 1.0,
+        "inst_fetch_energy": 1.0,
+        "inst_decode_energy": 1.0,
+        "transfer_energy": 1.0
+    },
+    "core_layout": [
+        8,
+        8
+    ],
+    "core_cnt": 8,
+    "noc_bus": {
+        "bus_topology": "shared",
+        "bus_width": 15,
+        "latency": 1,
+        "energy": 1.0,
+        "layout": [
+            8,
+            8
+        ]
+    },
+    "global_memory": {
+        "memory_size": 1048576,
+        "data_width": 16,
+        "write_latency": 10,
+        "write_energy": 1.0,
+        "read_latency": 8,
+        "read_energy": 1.0
+    },
+    "offchip_memory": {
+        "memory_size": 1048576,
+        "data_width": 16,
+        "write_latency": 10,
+        "write_energy": 1.0,
+        "read_latency": 8,
+        "read_energy": 1.0
+    },
+    "mapping_strategy": "utilization"
+}

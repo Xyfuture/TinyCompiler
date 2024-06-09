@@ -26,7 +26,7 @@ class AddOp(MicroOp):
             core.dummy_inst.append(self.full_info())
 
     def full_info(self):
-        return f"AddOp-{self.op_id} #src1: {self.src_ops[0]} #src2:{self.src_ops[1]}"
+        return f"AddOp-{self.op_id} #src1: {self.src_ops[0]} #src2:{self.src_ops[1]}  #core: {self.core_id}"
 
     def __repr__(self):
         return f"AddOp-{self.op_id}"
@@ -38,6 +38,7 @@ class TransferOp(MicroOp):
         self.src_core_id = src_core_id
         self.dst_core_id = dst_core_id
 
+        self.core_id = self.dst_core_id
         # if self.op_id == 5244:
         #     print('here')
 
@@ -58,6 +59,7 @@ class TransferOp(MicroOp):
             # if self.src_core_id == 1 and self.src_ops[0].output_machine_op.core_id == 3:
             #     assert False
 
+            # 实现前递操作
             src_micro_op = self.src_ops[0]
             while isinstance(src_micro_op, TransferOp):
                 src_micro_op = src_micro_op.src_ops[0]
@@ -128,6 +130,9 @@ class MatVecMulOp(MicroOp):
 
         # TODO 修改 模拟器 改变其 读写内存的方式,不在以 pe num 为准
         # TODO 支持对应位置的访存方式
+
+        for op in self.src_ops:
+            assert op.output_machine_op.core_id == self.core_id
 
         # 输入是一系列 vector , 需要先reshape到一个vector
         input_machine_ops = [op.output_machine_op for op in self.src_ops]
@@ -255,7 +260,7 @@ class ReLUOp(MicroOp):
             core.dummy_inst.append(self.full_info())
 
     def full_info(self):
-        return f"ReLUOp-{self.op_id} #src: {self.src_ops[0]}"
+        return f"ReLUOp-{self.op_id} #src: {self.src_ops[0]}  #core: {self.core_id}"
 
     def __repr__(self):
         return f"ReLUOp-{self.op_id}"
@@ -314,3 +319,25 @@ def pad_to_core(graph: MicroGraph):
 
                     # 更新 user_core_map
                     user_core_map[user_core_id] = new_pad_node
+
+
+
+def find_right_input_op(graph: MicroGraph):
+    # 针对 dep tensor 设计的 问题修改
+    # 可以考虑 dep tensor 每个 core 都存一份 op position
+
+    # 速度比较慢
+    cur_node:MicroNode
+    for cur_node in graph.nodes:
+        cur_micro_op:MicroOp = cur_node.micro_op
+        if isinstance(cur_micro_op,(MatVecMulOp,MaxPool2dOp)):
+            cur_core_id = cur_micro_op.core_id
+
+            tmp_micro_op:MicroOp
+            for tmp_micro_op in cur_micro_op.src_ops:
+                old_input_micro_op = tmp_micro_op
+                while tmp_micro_op.core_id != cur_core_id:
+                    assert len(tmp_micro_op.src_ops) == 1
+                    tmp_micro_op = tmp_micro_op.src_ops[0]
+                if old_input_micro_op != tmp_micro_op:
+                    cur_node.replace_input_with(old_input_micro_op.node,tmp_micro_op.node)

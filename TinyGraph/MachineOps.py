@@ -219,7 +219,7 @@ class MachineRearrangeOp(MachineOp):
         self.end_offset = end_offset
 
     def code_gen(self) -> List[Dict]:
-        # 堆上一堆 local cpy 可以实现数据的重新布局
+        # 堆上一堆 local cpy 可以实1现数据的重新布局
         # 注意偏移的情况
         inst_list = []
         if len(self.input_ops) == 1:

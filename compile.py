@@ -6,7 +6,7 @@ from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
 from TinyGraph.Machine import Chip, ChipConfig
-from TinyGraph.MicroOps import RawInputOp, pad_to_core
+from TinyGraph.MicroOps import RawInputOp, pad_to_core, find_right_input_op
 from TinyGraph.Module import DepModule, DepConv2d, DepLinear, report_mapping_status
 from Networks.resnet18 import resnet18, get_resnet18
 import json
@@ -102,6 +102,12 @@ if __name__ == '__main__':
 
     # run some optimization pass
     pad_to_core(graph)
+    find_right_input_op(graph)
+
+    # debug
+    # topo_node_list = topo_sort(graph)
+    # for node in topo_node_list:
+    #     print(node.micro_op.full_info())
 
     # lowering
     graph.lower_to_machine_op()

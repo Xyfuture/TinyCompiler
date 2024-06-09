@@ -293,7 +293,11 @@ class MemoryAllocator:
         addr = _malloc()
         if addr is None:
             self.merge_free_blocks()
-            return _malloc()
+            # return _malloc()
+            addr = _malloc()
+            if addr is None:
+                raise "Out of Memory, No Enough Memory Capacity"
+
         return addr
 
     def free(self, addr: int):
