@@ -43,8 +43,8 @@ if __name__ == '__main__':
         config_dict = json.load(f)
         chip_config = ChipConfig(**config_dict)
         if __name__ == '__main__':
-            assert args.mapping in ['performance', 'utilization'], "Unsupported Mapping Strategy"
-        chip_config.mapping_strategy = args.mapping
+            assert args.strategy in ['performance', 'utilization'], "Unsupported Mapping Strategy"
+        chip_config.mapping_strategy = args.strategy
 
     chip = Chip(chip_config)
     Chip.current_chip = chip

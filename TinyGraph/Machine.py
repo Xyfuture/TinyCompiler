@@ -151,6 +151,9 @@ class Chip:
         assigned_cnt = 0
 
         while assigned_cnt < group_cnt:
+            if self.next_mapping_index >= self.chip_config.core_cnt:
+                raise "Resource Error"
+
             cur_core = self.core_array[self.next_mapping_index]
             while cur_core.xbar_allocator.empty_xbar_cnt >= xbar_cnt_per_group and \
                     assigned_cnt < group_cnt:
@@ -158,8 +161,7 @@ class Chip:
                 assign_list.append((cur_core.core_id, xbar_group_id))
                 assigned_cnt += 1
             self.next_mapping_index += 1
-            if self.next_mapping_index >= self.chip_config.core_cnt:
-                return None
+
 
         return assign_list
 
