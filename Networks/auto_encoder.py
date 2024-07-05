@@ -6,7 +6,7 @@ from TinyGraph.Module import *
 from utils import create_input_tensor
 
 
-class AutoEncoder(DepModule):
+class AutoEncoderLarge(DepModule):
     def __init__(self, in_features: int = 1024):
         super().__init__()
 
@@ -41,5 +41,48 @@ class AutoEncoder(DepModule):
         return out
 
 
-def get_autoencoder():
-    return AutoEncoder(), create_input_tensor((1,), 1024)
+class AutoEncoderSmall(DepModule):
+    def __init__(self, in_features: int = 128):
+        super().__init__()
+
+        self.in_features = in_features
+
+        self.encoder = DepSequential(
+            DepLinear(self.in_features, 128),
+            DepReLU(),
+            DepLinear(128, 128),
+            DepReLU(),
+            DepLinear(128, 128),
+            DepReLU(),
+            DepLinear(128, 128),
+            DepReLU(),
+            DepLinear(128, 8),
+            DepReLU(),
+        )
+
+        self.decoder = DepSequential(
+            DepLinear(8, 128),
+            DepReLU(),
+            DepLinear(128, 128),
+            DepReLU(),
+            DepLinear(128, 128),
+            DepReLU(),
+            DepLinear(128, 128),
+            DepReLU(),
+            DepLinear(128, self.in_features),
+            DepReLU(),
+        )
+
+    def forward(self, x: DepTensor):
+        out = self.encoder(x)
+        out = self.decoder(out)
+
+        return out
+
+
+def get_autoencoder_large():
+    return AutoEncoderLarge(), create_input_tensor((1,), 1024)
+
+
+def get_autoencoder_small():
+    return AutoEncoderSmall(), create_input_tensor((1,), 128)

@@ -1,7 +1,9 @@
 import argparse
 import pickle
 
-from Networks.auto_encoder import AutoEncoder, get_autoencoder
+from Networks.auto_encoder import AutoEncoderLarge, get_autoencoder_large, get_autoencoder_small
+from Networks.moblienet import get_mobilenet
+from Networks.resnet8 import get_resnet8
 from Networks.yolo import get_yolovgg
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
@@ -24,7 +26,7 @@ parser.add_argument('--mapping', '-m', type=str, default=None, help='Mapping Fil
 parser.add_argument('--output', '-o', type=str, default=None, help='Output File Path: Trace or Mapping')
 parser.add_argument('--config', '-c', type=str, default='example/resnet_config.json', help='Configuration File Path')
 # parser.add_argument('--trace', '-t', type=str, default='example/resnet_trace.json', help='Trace File Path')
-parser.add_argument('--network', '-n', type=str, default='resnet', help='Network Name')
+parser.add_argument('--network', '-n', type=str, default='resnet18', help='Network Name')
 parser.add_argument('--verbose', '-v', action='store_true', help='Report All Module Results')
 
 args = parser.parse_args()
@@ -49,12 +51,22 @@ if __name__ == '__main__':
     chip = Chip(chip_config)
     Chip.current_chip = chip
 
-    if args.network == 'resnet':
+    if args.network == 'resnet18':
         net, input_tensor = get_resnet18()
-    elif args.network == 'autoencoder':
-        net, input_tensor = get_autoencoder()
+    elif args.network == 'autoencoder_large':
+        net, input_tensor = get_autoencoder_large()
+    elif args.network == 'resnet':  # compatibility
+        net, input_tensor = get_resnet18()
+    elif args.network == 'autoencoder':  # compatibility
+        net, input_tensor = get_autoencoder_large()
     elif args.network == 'yolo':
         net, input_tensor = get_yolovgg()
+    elif args.network == 'resnet8':
+        net,input_tensor = get_resnet8()
+    elif args.network == 'autoencoder_small':
+        net,input_tensor = get_autoencoder_small()
+    elif args.network == 'mobilenet':
+        net,input_tensor = get_mobilenet()
     else:
         raise "Set your own network here"
 
