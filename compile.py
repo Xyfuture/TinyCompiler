@@ -8,7 +8,7 @@ from Networks.yolo import get_yolovgg
 from TinyGraph.ConductArray import ConductArray
 from TinyGraph.DSL import DepTensor
 from TinyGraph.Graph import MicroGraph, topo_sort
-from TinyGraph.Machine import Chip, ChipConfig
+from TinyGraph.Machine import Chip, ChipConfig, Core
 from TinyGraph.MicroOps import RawInputOp, pad_to_core, find_right_input_op
 from TinyGraph.Module import DepModule, DepConv2d, DepLinear, report_mapping_status
 from Networks.resnet18 import resnet18, get_resnet18
@@ -62,11 +62,11 @@ if __name__ == '__main__':
     elif args.network == 'yolo':
         net, input_tensor = get_yolovgg()
     elif args.network == 'resnet8':
-        net,input_tensor = get_resnet8()
+        net, input_tensor = get_resnet8()
     elif args.network == 'autoencoder_small':
-        net,input_tensor = get_autoencoder_small()
+        net, input_tensor = get_autoencoder_small()
     elif args.network == 'mobilenet':
-        net,input_tensor = get_mobilenet()
+        net, input_tensor = get_mobilenet()
     else:
         raise "Set your own network here"
 
@@ -87,14 +87,18 @@ if __name__ == '__main__':
             print(report_mapping_status(net))
 
         with open(args.output, 'wb') as f:
-            pickle.dump(net, f)
+            pickle.dump([net, Chip.current_chip], f)
     elif args.target == 'trace':
         if args.mapping is None:
             # 进行mapping， 根据 config 中的strategy方式进行映射
             net.mapping()
         else:
             with open(args.mapping, 'rb') as f:
-                net = pickle.load(f)
+                net, chip_mapped = pickle.load(f)
+                cur_core: Core
+                mapped_core: Core
+                for cur_core, mapped_core in zip(chip.core_array, chip_mapped.core_array):
+                    cur_core.xbar_allocator = mapped_core.xbar_allocator
         # 输出mapping的结果
         if args.verbose:
             split_line = "=" * 70
